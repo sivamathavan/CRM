@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Rturox CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08080e;--s1:#0f0f18;--s2:#14141f;--s3:#1c1c2a;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.11);--b3:rgba(255,255,255,.18);
+  --accent:#6c5ce7;--a2:#a29bfe;--a3:#fd79a8;
+  --green:#00b894;--amber:#fdcb6e;--red:#ff7675;--blue:#4a6cf7;
+  --tx:#eeedf8;--mu:#8887a0;--mu2:#55546e;
+  --fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;--r:12px;--rs:8px;
+}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+
+/* ── SPLASH ── */
+#splash{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .5s,transform .5s;overflow-y:auto}
+#splash.hide{opacity:0;transform:scale(.97);pointer-events:none}
+.sp-eye{font-size:10px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--a2);margin-bottom:14px;font-family:var(--fd);display:flex;align-items:center;gap:8px}
+.sp-eye::before{content:'';flex:0 0 24px;height:1px;background:linear-gradient(90deg,transparent,var(--accent))}
+.sp-eye::after{content:'';flex:0 0 24px;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
+.sp-logo{font-family:var(--fd);font-size:clamp(44px,10vw,82px);font-weight:800;line-height:1;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 0%,var(--a2) 55%,var(--a3) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sp-tag{font-family:var(--fd);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:5px 0 20px}
+.sp-card{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r);padding:24px;width:100%;max-width:440px;margin-top:8px}
+.sp-card h2{font-family:var(--fd);font-size:14px;font-weight:700;margin-bottom:6px;color:var(--tx)}
+.sp-card p{font-size:12px;color:var(--mu);margin-bottom:12px;line-height:1.6}
+.sp-search{width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px;font-family:var(--fb);font-size:12px;color:var(--tx);outline:none;margin-bottom:8px;transition:border .15s}
+.sp-search:focus{border-color:var(--accent)}
+.sp-search::placeholder{color:var(--mu2)}
+
+/* Worker scroll list */
+.worker-scroll{max-height:220px;overflow-y:auto;border:1px solid var(--b2);border-radius:var(--rs);margin-bottom:12px;background:var(--s2)}
+.worker-scroll::-webkit-scrollbar{width:3px}
+.worker-scroll::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.worker-item{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--b1);user-select:none}
+.worker-item:last-child{border-bottom:none}
+.worker-item:hover{background:var(--s3)}
+.worker-item:active{background:rgba(108,92,231,.12)}
+.worker-item.admin-row{border-left:2px solid rgba(253,121,168,.5)}
+.worker-item .wi-name{flex:1;font-size:13px;font-weight:500}
+.wi-count{font-size:10px;color:var(--mu);margin-right:4px}
+.worker-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em}
+.badge-admin{background:rgba(253,121,168,.15);color:var(--a3)}
+.badge-worker{background:rgba(162,155,254,.15);color:var(--a2)}
+.no-workers{padding:20px;text-align:center;font-size:12px;color:var(--mu2)}
+
+/* Passkey overlay */
+.pk-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)}
+.pk-overlay.hide{display:none}
+.pk-box{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r);padding:28px;width:100%;max-width:340px;text-align:center;animation:pkIn .25s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pkIn{from{opacity:0;transform:scale(.9) translateY(10px)}to{opacity:1;transform:none}}
+.pk-box h3{font-family:var(--fd);font-size:15px;font-weight:700;margin-bottom:4px}
+.pk-box p{font-size:12px;color:var(--mu);margin-bottom:16px}
+.pk-user{display:inline-block;background:rgba(108,92,231,.12);border:1px solid rgba(108,92,231,.25);color:var(--a2);font-size:11px;font-weight:600;padding:3px 12px;border-radius:100px;margin-bottom:14px}
+.pk-dots{display:flex;gap:12px;justify-content:center;margin-bottom:14px}
+.pk-dot{width:14px;height:14px;border-radius:50%;background:var(--b2);transition:all .2s;border:1px solid var(--b2)}
+.pk-dot.filled{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(108,92,231,.5)}
+.pk-dot.error{background:var(--red);border-color:var(--red);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.pk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.pk-num{font-family:var(--fd);font-size:18px;font-weight:700;padding:14px;border-radius:var(--rs);border:1px solid var(--b2);background:var(--s2);color:var(--tx);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.pk-num:hover{background:var(--s3);border-color:var(--accent)}
+.pk-num:active{transform:scale(.9);background:rgba(108,92,231,.15)}
+.pk-err{font-size:12px;color:var(--red);min-height:18px;margin-bottom:6px;font-weight:500}
+
+/* ── APP ── */
+#app{display:none;min-height:100vh;flex-direction:column;height:100vh;overflow:hidden}
+#app.show{display:flex}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(8,8,14,.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--b1);padding:0 14px;height:50px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.tb-logo{font-family:var(--fd);font-size:17px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,#fff,var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex-shrink:0}
+.tb-sep{width:1px;height:18px;background:var(--b2);flex-shrink:0}
+.tb-chip{font-size:11px;font-weight:500;padding:3px 10px;border-radius:100px;white-space:nowrap}
+.chip-admin{background:rgba(253,121,168,.12);border:1px solid rgba(253,121,168,.25);color:var(--a3)}
+.chip-worker{background:rgba(108,92,231,.12);border:1px solid rgba(108,92,231,.25);color:var(--a2)}
+.tb-stats{display:flex;gap:10px;font-size:11px;color:var(--mu);flex-wrap:wrap}
+.tb-stats span{display:flex;align-items:center;gap:4px}
+.tb-stats b{color:var(--tx);font-weight:600}
+.tb-right{margin-left:auto;display:flex;gap:6px;align-items:center}
+
+/* ── ADMIN LAYOUT ── */
+.admin-layout{display:grid;grid-template-columns:240px 1fr;flex:1;overflow:hidden;min-height:0}
+.admin-nav{border-right:1px solid var(--b1);background:var(--s1);display:flex;flex-direction:column;padding:12px 0;overflow-y:auto;flex-shrink:0}
+.nav-section{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--mu2);padding:0 14px;margin:10px 0 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 14px;font-size:12px;font-weight:500;color:var(--mu);cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--tx);background:var(--s2)}
+.nav-item.active{color:var(--tx);border-left-color:var(--accent);background:rgba(108,92,231,.08)}
+.nav-item .ni{font-size:15px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:rgba(108,92,231,.15);color:var(--a2)}
+.admin-main{overflow-y:auto;background:var(--bg);flex:1}
+.admin-main::-webkit-scrollbar{width:3px}
+.admin-main::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.admin-page{display:none;padding:20px}
+.admin-page.show{display:block}
+
+/* CARDS */
+.page-title{font-family:var(--fd);font-size:18px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--mu);margin-bottom:20px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:14px 16px}
+.stat-val{font-family:var(--fd);font-size:24px;font-weight:800;color:var(--tx)}
+.stat-label{font-size:11px;color:var(--mu);margin-top:3px}
+.stat-sub{font-size:11px;margin-top:2px;font-weight:500}
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card-title .ct-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:100px;background:var(--b1);color:var(--mu)}
+
+/* TABLES */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu2);font-weight:600;border-bottom:1px solid var(--b1)}
+.data-table td{padding:9px 10px;border-bottom:1px solid var(--b1);color:var(--tx);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,.02)}
+
+/* FORM ELEMENTS */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form-row.single{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu2);font-weight:600}
+.fg input,.fg select,.fg textarea{background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 11px;font-family:var(--fb);font-size:12px;color:var(--tx);outline:none;transition:border .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent)}
+select option{background:var(--s2);color:var(--tx)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:var(--rs);font-family:var(--fb);font-size:11px;font-weight:500;border:1px solid var(--b2);background:var(--s2);color:var(--tx);cursor:pointer;transition:all .15s;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--s3);border-color:var(--b3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#5d4fd6}
+.btn.success{background:rgba(0,184,148,.18);border-color:rgba(0,184,148,.35);color:var(--green)}
+.btn.danger{background:rgba(255,118,117,.1);border-color:rgba(255,118,117,.3);color:var(--red)}
+.btn.warn{background:rgba(253,203,110,.1);border-color:rgba(253,203,110,.3);color:var(--amber)}
+.btn.sm{padding:4px 9px;font-size:10px}
+.btn.wa{background:rgba(37,211,102,.1);border-color:rgba(37,211,102,.3);color:#25d366}
+.btn.sms-b{background:rgba(253,203,110,.1);border-color:rgba(253,203,110,.3);color:var(--amber)}
+
+/* ACTIVITY FEED */
+.activity-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1)}
+.activity-item:last-child{border-bottom:none}
+.act-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.act-body{flex:1;min-width:0}
+.act-text{font-size:12px;color:var(--tx);line-height:1.5}
+.act-text strong{color:var(--a2)}
+.act-time{font-size:10px;color:var(--mu2);margin-top:2px}
+
+/* PERF BARS */
+.perf-bar{height:4px;border-radius:2px;background:var(--b1);overflow:hidden;margin-top:4px;flex:1}
+.perf-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--a2))}
+
+/* ── WORKER LAYOUT ── */
+.worker-layout{display:grid;grid-template-columns:270px 1fr;flex:1;overflow:hidden;min-height:0}
+.sidebar{border-right:1px solid var(--b1);background:var(--s1);display:flex;flex-direction:column;overflow:hidden}
+.ss{padding:9px}
+.ss input{width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:7px 10px;font-family:var(--fb);font-size:12px;color:var(--tx);outline:none}
+.ss input::placeholder{color:var(--mu2)}
+.ss input:focus{border-color:var(--accent)}
+.sf{padding:5px 9px 7px;border-bottom:1px solid var(--b1);display:flex;gap:4px;flex-wrap:wrap}
+.fc{font-size:10px;font-weight:500;padding:3px 9px;border-radius:100px;border:1px solid var(--b2);background:transparent;color:var(--mu);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.fc.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.fc:hover:not(.active){color:var(--tx)}
+.ll{overflow-y:auto;flex:1}
+.ll::-webkit-scrollbar{width:3px}
+.ll::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.li{padding:10px 11px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .15s;position:relative;border-left:2px solid transparent}
+.li:hover{background:var(--s2)}
+.li.active{background:rgba(108,92,231,.09);border-left-color:var(--accent)}
+.li.called{opacity:.55}
+.li-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:3px}
+.li-name{font-size:12px;font-weight:500;line-height:1.3}
+.pd{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.pd.high{background:#fd79a8;box-shadow:0 0 5px rgba(253,121,168,.5)}
+.pd.medium{background:var(--amber)}
+.pd.low{background:var(--mu2)}
+.li-meta{font-size:10px;color:var(--mu)}
+.li-tags{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.tag{font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,.05);color:var(--mu);border:1px solid var(--b1)}
+.tag.s{background:rgba(108,92,231,.12);color:var(--a2);border-color:rgba(108,92,231,.22)}
+.li-status-badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px}
+.sf-foot{padding:7px 12px;border-top:1px solid var(--b1);display:grid;grid-template-columns:repeat(4,1fr);flex-shrink:0}
+.sfv{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--tx);text-align:center}
+.sfl{font-size:8px;text-transform:uppercase;letter-spacing:.04em;color:var(--mu2);text-align:center}
+
+/* MAIN PANEL */
+.main-panel{overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
+.main-panel::-webkit-scrollbar{width:3px}
+.main-panel::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--mu);padding:40px;text-align:center}
+
+/* LEAD DETAIL */
+.lead-hdr{padding:14px 18px;border-bottom:1px solid var(--b1);background:var(--s1);flex-shrink:0}
+.lh-row{display:flex;align-items:center;gap:10px}
+.av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--a3));display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.lhi{flex:1;min-width:0}
+.lh-name{font-family:var(--fd);font-size:15px;font-weight:700}
+.lh-meta{font-size:11px;color:var(--mu);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ibar{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap}
+.itrack{width:70px;height:3px;background:var(--b2);border-radius:2px;overflow:hidden}
+.ifill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--a3))}
+.ipct{font-size:10px;font-weight:600;color:var(--a2)}
+.lh-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.call-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--rs);font-family:var(--fb);font-size:13px;font-weight:600;background:linear-gradient(135deg,#00b894,#00cec9);color:#fff;border:none;cursor:pointer;text-decoration:none;transition:opacity .2s}
+.call-btn:hover{opacity:.88}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--b1);background:var(--s1);flex-shrink:0;padding:0 14px;overflow-x:auto}
+.tabs::-webkit-scrollbar{height:0}
+.tab{font-size:11px;font-weight:500;padding:9px 12px;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab.active{color:var(--tx);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--tx)}
+.tab-content{display:none;flex:1;flex-direction:column;overflow-y:auto}
+.tab-content.show{display:flex}
+.tc{padding:16px 18px;flex:1}
+
+/* CALL LOG */
+.log-form{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.oc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.oc{font-size:11px;font-weight:500;padding:6px 14px;border-radius:100px;border:1px solid var(--b2);background:transparent;color:var(--mu);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.oc:hover{color:var(--tx);border-color:var(--b3)}
+.oc.sel{color:#fff;border-color:transparent}
+.oc[data-v="Interested"].sel{background:#00b894}
+.oc[data-v="Call Back"].sel{background:#fdcb6e;color:#222}
+.oc[data-v="Not Interested"].sel{background:#ff7675}
+.oc[data-v="No Answer"].sel{background:#636e72}
+.oc[data-v="Busy"].sel{background:#fdcb6e;color:#222}
+.oc[data-v="Wrong Number"].sel{background:#555}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.fg2{display:flex;flex-direction:column;gap:5px}
+.fg2.full{grid-column:1/-1}
+.fg2 label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu2);font-weight:600}
+.fg2 input,.fg2 select,.fg2 textarea{background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 11px;font-family:var(--fb);font-size:12px;color:var(--tx);outline:none;transition:border .15s}
+.fg2 input:focus,.fg2 select:focus,.fg2 textarea:focus{border-color:var(--accent)}
+.fg2 textarea{resize:vertical;min-height:80px}
+
+/* MSG BOX */
+.msg-box{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:16px;font-size:12px;line-height:1.85;color:#c8c6d8;white-space:pre-wrap;word-break:break-word;max-height:500px;overflow-y:auto}
+.msg-box::-webkit-scrollbar{width:3px}
+.msg-box::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+/* EMAIL */
+.epw{background:#f0f0f0;border-radius:var(--r);overflow:hidden;border:1px solid var(--b1)}
+
+/* CALL HISTORY */
+.chi{background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);padding:12px 14px;margin-bottom:8px}
+.chi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.chi-time{font-size:10px;color:var(--mu2)}
+.chi-note{font-size:12px;color:var(--mu);line-height:1.5;margin-top:4px}
+.chi-by{font-size:10px;color:var(--mu2);margin-top:4px}
+
+/* ACTION BAR */
+.action-bar{display:flex;gap:5px;align-items:center;padding:10px 16px;border-top:1px solid var(--b1);background:var(--s1);position:sticky;bottom:0;flex-wrap:wrap;flex-shrink:0}
+.spacer{flex:1}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}
+.modal-bg.hide{display:none}
+.modal{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r);padding:22px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:pkIn .25s cubic-bezier(.34,1.56,.64,1) both}
+.modal h2{font-family:var(--fd);font-size:15px;font-weight:700;margin-bottom:14px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 16px;font-size:12px;color:var(--tx);transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:7px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.toast.show{transform:translateY(0);opacity:1}
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+/* DROP ZONE */
+.drop-zone{border:1.5px dashed rgba(108,92,231,.35);border-radius:var(--rs);padding:18px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(108,92,231,.03);position:relative;width:100%}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:rgba(108,92,231,.08)}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-zone p{font-size:12px;color:var(--mu);line-height:1.6}
+.drop-zone p strong{color:var(--tx);font-weight:500}
+.prog-wrap{background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 13px;font-size:11px;color:var(--mu);display:none;width:100%;margin-top:8px}
+.prog-wrap.show{display:block}
+.prog-bar{width:100%;height:3px;background:var(--b1);border-radius:2px;overflow:hidden;margin-top:6px}
+.prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--a2));transition:width .3s}
+
+/* OB badges */
+.ob{font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;display:inline-block}
+.ob-interested{background:rgba(0,184,148,.15);color:var(--green)}
+.ob-callback{background:rgba(253,203,110,.15);color:var(--amber)}
+.ob-notinterested{background:rgba(255,118,117,.15);color:var(--red)}
+.ob-noanswer{background:rgba(136,135,160,.15);color:var(--mu)}
+.ob-busy{background:rgba(253,203,110,.15);color:var(--amber)}
+.ob-new{background:rgba(108,92,231,.15);color:var(--a2)}
+
+/* ══════════════════════════════════
+   MOBILE RESPONSIVE — full overhaul
+   ══════════════════════════════════ */
+@media(max-width:768px){
+
+  /* ── TOPBAR ── */
+  .topbar{padding:0 10px;gap:7px;height:46px}
+  .tb-logo{font-size:15px}
+  .tb-stats{display:none}
+  .tb-sep{display:none}
+  .tb-chip{font-size:10px;padding:2px 8px}
+  .tb-right .btn{padding:4px 8px;font-size:10px}
+  #adminPanelBtn{font-size:10px;padding:4px 8px}
+
+  /* ── SPLASH ── */
+  .sp-logo{font-size:clamp(36px,14vw,60px)}
+  .sp-card{padding:16px;margin-top:6px}
+  .sp-card h2{font-size:13px}
+  .worker-scroll{max-height:200px}
+  .worker-item{padding:10px 12px}
+  .worker-item .wi-name{font-size:13px}
+
+  /* ── PASSKEY ── */
+  .pk-box{padding:20px 16px;border-radius:14px}
+  .pk-box h3{font-size:14px}
+  .pk-pad{gap:6px}
+  .pk-num{font-size:16px;padding:13px 10px}
+  .pk-dots{gap:10px;margin-bottom:12px}
+  .pk-dot{width:13px;height:13px}
+
+  /* ── ADMIN LAYOUT ── */
+  .admin-layout{
+    grid-template-columns:1fr;
+    grid-template-rows:auto 1fr;
+    height:calc(100vh - 46px);
+    overflow:hidden;
+  }
+  .admin-nav{
+    border-right:none;
+    border-bottom:1px solid var(--b1);
+    max-height:44px; /* collapsed — just one row of icons */
+    overflow:hidden;
+    padding:0;
+    display:flex;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+  }
+  .admin-nav::-webkit-scrollbar{height:0}
+  .nav-section{display:none}
+  .nav-item{
+    flex-direction:column;
+    gap:2px;
+    padding:6px 10px;
+    font-size:9px;
+    border-left:none;
+    border-bottom:2px solid transparent;
+    min-width:56px;
+    text-align:center;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .nav-item.active{border-left-color:transparent;border-bottom-color:var(--accent);background:rgba(108,92,231,.08)}
+  .nav-item .ni{font-size:16px;width:auto}
+  .nav-badge{display:none}
+  .admin-main{overflow-y:auto;height:100%}
+  .admin-page{padding:12px}
+
+  /* ── DASHBOARD ── */
+  .stat-grid{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .stat-card{padding:10px 12px}
+  .stat-val{font-size:20px}
+  .stat-label{font-size:10px}
+  #page-dashboard>div[style*="grid"]{grid-template-columns:1fr!important}
+  .page-title{font-size:15px}
+  .page-sub{font-size:11px;margin-bottom:14px}
+  .card{padding:12px;margin-bottom:10px}
+  .card-title{font-size:12px}
+
+  /* ── TABLES ── */
+  .data-table{font-size:11px}
+  .data-table th{padding:6px 7px;font-size:9px}
+  .data-table td{padding:7px 7px}
+  /* Hide less important columns on mobile */
+  .data-table th:nth-child(4),.data-table td:nth-child(4){display:none}
+
+  /* ── FORMS ── */
+  .form-grid,.form-row{grid-template-columns:1fr}
+  .fg input,.fg select,.fg textarea{padding:9px 10px;font-size:13px}
+  .fg2 input,.fg2 select,.fg2 textarea{padding:9px 10px;font-size:13px}
+
+  /* ── WORKER / CRM LAYOUT ── */
+  .worker-layout{
+    grid-template-columns:1fr;
+    grid-template-rows:auto 1fr;
+    height:calc(100vh - 46px);
+    overflow:hidden;
+  }
+  .sidebar{
+    border-right:none;
+    border-bottom:1px solid var(--b1);
+    max-height:42vh;
+    min-height:0;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .main-panel{
+    flex:1;
+    overflow-y:auto;
+    min-height:0;
+  }
+
+  /* Filter chips — horizontal scroll */
+  .sf{flex-wrap:nowrap;overflow-x:auto;gap:5px;padding-bottom:8px}
+  .sf::-webkit-scrollbar{height:0}
+  .fc{font-size:10px;padding:4px 10px;flex-shrink:0}
+
+  /* Lead list items */
+  .ll{flex:1;overflow-y:auto;min-height:0}
+  .li{padding:9px 10px}
+  .li-name{font-size:12px}
+  .li-meta{font-size:10px}
+  .li-tags .tag{font-size:9px;padding:1px 5px}
+
+  /* Sidebar footer */
+  .sf-foot{padding:5px 8px}
+  .sfv{font-size:12px}
+  .sfl{font-size:7px}
+
+  /* ── LEAD HEADER ── */
+  .lead-hdr{padding:10px 12px}
+  .av{width:34px;height:34px;font-size:11px}
+  .lh-name{font-size:13px}
+  .lh-meta{font-size:10px}
+  .lh-acts{gap:5px;margin-top:8px}
+  .call-btn{padding:8px 14px;font-size:12px}
+  .btn.wa,.btn.sms-b{padding:6px 10px;font-size:11px}
+
+  /* ── TABS ── */
+  .tabs{padding:0 8px}
+  .tab{font-size:10px;padding:8px 8px}
+
+  /* ── TAB CONTENT ── */
+  .tc{padding:10px 12px}
+
+  /* ── CALL LOG FORM ── */
+  .log-form{padding:14px}
+  .oc-chips{gap:5px;flex-wrap:wrap}
+  .oc{font-size:10px;padding:5px 11px}
+
+  /* ── BUTTONS ── */
+  .btn{padding:6px 10px;font-size:10px}
+  .btn.sm{padding:4px 8px;font-size:9px}
+
+  /* ── ACTION BAR ── */
+  .action-bar{padding:8px 10px;gap:5px}
+
+  /* ── MODAL ── */
+  .modal{padding:16px;margin:8px}
+  .modal h2{font-size:14px;margin-bottom:10px}
+
+  /* ── MSG BOX ── */
+  .msg-box{font-size:11px;padding:12px;max-height:340px}
+
+  /* ── ACTIVITY ITEMS ── */
+  .activity-item{padding:7px 0;gap:8px}
+  .act-text{font-size:11px}
+
+  /* ── DROP ZONE ── */
+  .drop-zone{padding:14px}
+  .drop-zone p{font-size:11px}
+
+  /* ── PERF BARS ── */
+  #workerPerfList div{margin-bottom:8px!important}
+}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fu .28s ease both}
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ PASSKEY OVERLAY ══════════════════ -->
+<div class="pk-overlay hide" id="pkOverlay">
+  <div class="pk-box">
+    <div style="font-size:28px;margin-bottom:6px">🔐</div>
+    <h3>Enter Passkey</h3>
+    <div class="pk-user" id="pkUserLabel">—</div>
+    <p>Enter your 4-digit PIN</p>
+    <div class="pk-dots" id="pkDots">
+      <div class="pk-dot" id="d0"></div>
+      <div class="pk-dot" id="d1"></div>
+      <div class="pk-dot" id="d2"></div>
+      <div class="pk-dot" id="d3"></div>
+    </div>
+    <div class="pk-err" id="pkErr"></div>
+    <div class="pk-pad">
+      <button class="pk-num" onclick="pkPress(1)">1</button>
+      <button class="pk-num" onclick="pkPress(2)">2</button>
+      <button class="pk-num" onclick="pkPress(3)">3</button>
+      <button class="pk-num" onclick="pkPress(4)">4</button>
+      <button class="pk-num" onclick="pkPress(5)">5</button>
+      <button class="pk-num" onclick="pkPress(6)">6</button>
+      <button class="pk-num" onclick="pkPress(7)">7</button>
+      <button class="pk-num" onclick="pkPress(8)">8</button>
+      <button class="pk-num" onclick="pkPress(9)">9</button>
+      <button class="pk-num" onclick="pkClear()" style="font-size:13px">⌫</button>
+      <button class="pk-num" onclick="pkPress(0)">0</button>
+      <button class="pk-num" onclick="pkCancel()" style="font-size:11px;color:var(--mu)">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SPLASH ══════════════════ -->
+<div id="splash">
+  <div class="sp-eye">Rturox Sales CRM</div>
+  <div class="sp-logo">Rturox</div>
+  <div class="sp-tag">CRM · Telecalling · Team Management</div>
+
+  <div class="sp-card" id="splashCard">
+    <h2>Select your profile</h2>
+    <p>Find your name and enter your passkey to log in.</p>
+    <input class="sp-search" id="splashSearch" placeholder="🔍 Search your name…" oninput="filterWorkerList()" autocomplete="off">
+    <div class="worker-scroll" id="workerGrid">
+      <div class="no-workers">Loading team…</div>
+    </div>
+    <div style="font-size:10px;color:var(--mu2);text-align:center">👑 Admin · 👤 Worker — All profiles require a passkey</div>
+  </div>
+</div>
+
+<!-- ══════════════════ APP ══════════════════ -->
+<div id="app">
+  <div class="topbar">
+    <div class="tb-logo">Rturox</div>
+    <div class="tb-sep"></div>
+    <div class="tb-chip" id="tbChip">—</div>
+    <div class="tb-stats">
+      <span>Total <b id="statTotal">0</b></span>
+      <span>📞 <b id="statCalled" style="color:#00b894">0</b></span>
+      <span>🔥 <b id="statHot" style="color:#fd79a8">0</b></span>
+    </div>
+    <div class="tb-right">
+      <button class="btn" id="adminPanelBtn" style="display:none" onclick="toggleAdminPanel()">⚙️ Admin</button>
+      <select id="sortSel" onchange="applyFilters()" style="display:none;font-size:11px;padding:4px 8px;background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
+        <option value="uncalled">📞 Uncalled first</option>
+        <option value="interest">↓ Interest %</option>
+        <option value="priority">↓ Priority</option>
+        <option value="name">A–Z</option>
+      </select>
+      <button class="btn" onclick="resetApp()" style="padding:5px 10px;font-size:10px">↩ Exit</button>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="adminPanel" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
+    <div class="admin-layout">
+      <div class="admin-nav">
+        <div class="nav-section">Overview</div>
+        <div class="nav-item active" onclick="showAdminPage('dashboard',this)"><span class="ni">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="showAdminPage('activity',this)"><span class="ni">📋</span> Activity Log <span class="nav-badge" id="actBadge">0</span></div>
+        <div class="nav-section">Management</div>
+        <div class="nav-item" onclick="showAdminPage('workers',this)"><span class="ni">👥</span> Workers</div>
+        <div class="nav-item" onclick="showAdminPage('sheets',this)"><span class="ni">📄</span> Sheets</div>
+        <div class="nav-item" onclick="showAdminPage('allleads',this)"><span class="ni">🗂️</span> All Leads</div>
+        <div class="nav-section">Actions</div>
+        <div class="nav-item" onclick="showCRMView()"><span class="ni">📞</span> Open CRM View</div>
+        <div class="nav-item" onclick="openAddWorkerModal()"><span class="ni">➕</span> Add Worker</div>
+      </div>
+      <div class="admin-main">
+
+        <!-- DASHBOARD PAGE -->
+        <div class="admin-page show" id="page-dashboard">
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">Real-time overview of all leads and team activity</div>
+          <div class="stat-grid" id="dashStats"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="card">
+              <div class="card-title">👥 Worker Performance</div>
+              <div id="workerPerfList"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">📊 Lead Status Breakdown</div>
+              <div id="statusBreakdown"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card-title">⚡ Recent Activity <span class="ct-badge" id="recentCount">0</span></div>
+            <div id="recentActivity"></div>
+          </div>
+        </div>
+
+        <!-- ACTIVITY LOG PAGE -->
+        <div class="admin-page" id="page-activity">
+          <div class="page-title">Activity Log</div>
+          <div class="page-sub">Every call, message and action by your team</div>
+          <div class="card">
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+              <select id="actWorkerFilter" onchange="loadActivityLog()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
+                <option value="">All Workers</option>
+              </select>
+              <select id="actActionFilter" onchange="loadActivityLog()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
+                <option value="">All Actions</option>
+                <option value="call_logged">Call Logged</option>
+                <option value="email_sent">Email Sent</option>
+                <option value="wa_sent">WhatsApp Sent</option>
+              </select>
+              <button class="btn sm" onclick="loadActivityLog()">🔄 Refresh</button>
+            </div>
+            <div id="activityList"></div>
+          </div>
+        </div>
+
+        <!-- WORKERS PAGE -->
+        <div class="admin-page" id="page-workers">
+          <div class="page-title">Workers</div>
+          <div class="page-sub">Manage your telecalling team and passkeys</div>
+          <div class="card">
+            <div class="card-title">Team Members <button class="btn primary sm" onclick="openAddWorkerModal()" style="margin-left:auto">➕ Add Worker</button></div>
+            <table class="data-table">
+              <thead><tr><th>Name</th><th>Role</th><th>Calls Made</th><th>Hot Leads</th><th>Status</th><th>Passkey</th><th>Actions</th></tr></thead>
+              <tbody id="workersTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SHEETS PAGE -->
+        <div class="admin-page" id="page-sheets">
+          <div class="page-title">Lead Sheets</div>
+          <div class="page-sub">Upload, manage and assign Excel sheets to workers</div>
+          <div class="card">
+            <div class="card-title">📤 Upload New Sheet</div>
+            <div class="form-row">
+              <div class="fg">
+                <label>Sheet Name</label>
+                <input type="text" id="sheetName" placeholder="e.g. Salem Leads June">
+              </div>
+              <div class="fg">
+                <label>Assign To Worker</label>
+                <select id="sheetWorker"><option value="">— Select worker —</option></select>
+              </div>
+            </div>
+            <div class="drop-zone" id="sheetDropZone">
+              <input type="file" id="sheetFileInput" accept=".xlsx,.xls" onchange="uploadSheetFile(this.files[0])">
+              <span style="font-size:22px;display:block;margin-bottom:6px">📂</span>
+              <p><strong>Drop Excel file here</strong> or click to browse<br><span style="font-size:11px;opacity:.7">Supports .xlsx and .xls — leads assigned to selected worker</span></p>
+            </div>
+            <div class="prog-wrap" id="sheetProgWrap">
+              <span id="sheetProgMsg">Uploading…</span>
+              <div class="prog-bar"><div class="prog-fill" id="sheetProgFill" style="width:0%"></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">All Sheets <span class="ct-badge" id="sheetCount">0</span></div>
+            <table class="data-table">
+              <thead><tr><th>Sheet Name</th><th>Assigned To</th><th>Total Leads</th><th>Uploaded</th><th>Actions</th></tr></thead>
+              <tbody id="sheetsTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ALL LEADS PAGE -->
+        <div class="admin-page" id="page-allleads">
+          <div class="page-title">All Leads</div>
+          <div class="page-sub">Monitor every lead across all workers</div>
+          <div class="card">
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+              <input type="text" id="allLeadsSearch" placeholder="🔍 Search…" oninput="renderAllLeads()" style="flex:1;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:7px 10px;font-size:12px;color:var(--tx);font-family:var(--fb);outline:none;min-width:160px">
+              <select id="allLeadsWorker" onchange="renderAllLeads()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
+                <option value="">All Workers</option>
+              </select>
+              <select id="allLeadsStatus" onchange="renderAllLeads()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
+                <option value="">All Statuses</option>
+                <option>Interested</option><option>Call Back</option><option>Not Interested</option><option>No Answer</option><option>Busy</option><option>New</option>
+              </select>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>Business</th><th>Contact</th><th>City</th><th>Service</th><th>Worker</th><th>Status</th><th>Interest</th></tr></thead>
+              <tbody id="allLeadsTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /admin-main -->
+    </div><!-- /admin-layout -->
+  </div><!-- /adminPanel -->
+
+  <!-- CRM VIEW -->
+  <div id="crmPanel" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
+    <div class="worker-layout">
+      <div class="sidebar">
+        <div class="ss">
+          <input type="text" id="searchInput" placeholder="🔍 Search leads…" oninput="applyFilters()">
+        </div>
+        <div class="sf">
+          <button class="fc active" data-filter="all" onclick="setFilter('all',this)">All</button>
+          <button class="fc" data-filter="uncalled" onclick="setFilter('uncalled',this)">📞 Uncalled</button>
+          <button class="fc" data-filter="Interested" onclick="setFilter('Interested',this)">🔥 Hot</button>
+          <button class="fc" data-filter="Not Interested" onclick="setFilter('Not Interested',this)">❌ Cold</button>
+          <button class="fc" data-filter="Call Back" onclick="setFilter('Call Back',this)">🔄 Follow-up</button>
+          <button class="fc" data-filter="High" onclick="setFilter('High',this)">🔴 High</button>
+        </div>
+        <div class="ll" id="leadList"></div>
+        <div class="sf-foot">
+          <div><div class="sfv" id="sfTotal">0</div><div class="sfl">Total</div></div>
+          <div><div class="sfv" id="sfShow">0</div><div class="sfl">Listed</div></div>
+          <div><div class="sfv" id="sfCalled">0</div><div class="sfl">Called</div></div>
+          <div><div class="sfv" id="sfHot">0</div><div class="sfl">Hot🔥</div></div>
+        </div>
+      </div>
+
+      <div class="main-panel" id="mainPanel">
+        <div class="empty-state" id="emptyState">
+          <div style="font-size:42px;opacity:.2">📞</div>
+          <p style="font-size:13px;font-weight:500">Select a lead to start</p>
+          <p style="font-size:11px;margin-top:4px;color:var(--mu2)">Pick any name from the sidebar</p>
+        </div>
+
+        <div id="leadView" style="display:none;flex:1;flex-direction:column">
+          <div class="lead-hdr">
+            <div class="lh-row">
+              <div class="av" id="lhAv">?</div>
+              <div class="lhi">
+                <div class="lh-name" id="lhName">—</div>
+                <div class="lh-meta" id="lhMeta">—</div>
+                <div class="ibar">
+                  <div class="itrack"><div class="ifill" id="lhBar" style="width:0%"></div></div>
+                  <span class="ipct" id="lhPct">0%</span>
+                  <span id="lhPri" style="font-size:10px;color:var(--mu);margin-left:3px"></span>
+                  <span id="lhStat" class="ob ob-new" style="margin-left:6px">New</span>
+                </div>
+              </div>
+            </div>
+            <div class="lh-acts" id="lhActs"></div>
+          </div>
+
+          <div class="tabs">
+            <div class="tab active" onclick="switchTab('call',this)">📞 Call Log</div>
+            <div class="tab" onclick="switchTab('email',this)">📧 Email</div>
+            <div class="tab" onclick="switchTab('wa-en',this)">💬 WA English</div>
+            <div class="tab" onclick="switchTab('wa-ta',this)">💬 WA Thanglish</div>
+            <div class="tab" onclick="switchTab('sms',this)">📱 SMS</div>
+            <div class="tab" onclick="switchTab('hist',this)">📋 History</div>
+          </div>
+
+          <div class="tab-content show" id="tab-call">
+            <div class="tc">
+              <div class="log-form fu">
+                <div style="font-family:var(--fd);font-size:13px;font-weight:700;margin-bottom:4px">📞 Log Call Outcome</div>
+                <div style="font-size:11px;color:var(--mu);margin-bottom:12px">Select what happened on this call:</div>
+                <div class="oc-chips">
+                  <button class="oc" data-v="Interested" onclick="pickOC(this)">✅ Interested</button>
+                  <button class="oc" data-v="Call Back" onclick="pickOC(this)">🔄 Call Back</button>
+                  <button class="oc" data-v="Not Interested" onclick="pickOC(this)">❌ Not Interested</button>
+                  <button class="oc" data-v="No Answer" onclick="pickOC(this)">📵 No Answer</button>
+                  <button class="oc" data-v="Busy" onclick="pickOC(this)">⏳ Busy</button>
+                  <button class="oc" data-v="Wrong Number" onclick="pickOC(this)">🚫 Wrong Number</button>
+                </div>
+                <div class="form-grid">
+                  <div class="fg2"><label>Follow-up Date</label><input type="date" id="logDate"></div>
+                  <div class="fg2"><label>Follow-up Time</label><input type="time" id="logTime"></div>
+                  <div class="fg2 full"><label>Call Notes</label><textarea id="logNotes" placeholder="What did they say? Requirements, objections, next steps…"></textarea></div>
+                </div>
+                <button class="btn success" style="width:100%;justify-content:center;padding:10px;font-size:12px" onclick="saveLog()">💾 Save Call Log</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="tab-email">
+            <div class="tc">
+              <div id="emailMeta" style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);padding:9px 13px;margin-bottom:10px;font-size:12px"></div>
+              <div style="display:flex;gap:8px;margin-bottom:10px">
+                <button class="btn success" onclick="openGmail()" style="flex:1;justify-content:center;padding:10px">📧 Open Gmail</button>
+                <button class="btn" onclick="copyHTML()">📋 Copy HTML</button>
+              </div>
+              <div style="font-size:11px;color:var(--mu);margin-bottom:10px">👆 Open Gmail → paste the HTML into compose body. Renders as styled email.</div>
+              <div class="epw"><iframe id="emailFrame" style="width:100%;min-height:900px;border:none;display:block;background:#fff" sandbox="allow-same-origin allow-popups"></iframe></div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="tab-wa-en">
+            <div class="tc">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:11px;color:var(--mu)">💬 English — Send FIRST when contacting</div>
+                <button class="btn" onclick="copyMsg('wa-en')" style="padding:4px 10px;font-size:10px">📋 Copy</button>
+              </div>
+              <div class="msg-box" id="msg-wa-en"></div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="tab-wa-ta">
+            <div class="tc">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:11px;color:var(--mu)">💬 Thanglish — Follow-up after call</div>
+                <button class="btn" onclick="copyMsg('wa-ta')" style="padding:4px 10px;font-size:10px">📋 Copy</button>
+              </div>
+              <div class="msg-box" id="msg-wa-ta"></div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="tab-sms">
+            <div class="tc">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:11px;color:var(--mu)">📱 SMS — Full professional opener</div>
+                <button class="btn" onclick="copyMsg('sms')" style="padding:4px 10px;font-size:10px">📋 Copy</button>
+              </div>
+              <div class="msg-box" id="msg-sms"></div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="tab-hist">
+            <div class="tc">
+              <div style="font-size:11px;color:var(--mu);margin-bottom:12px">📋 Full call history for this lead</div>
+              <div id="callHist"></div>
+            </div>
+          </div>
+
+          <div class="action-bar" id="actionBar">
+            <div style="font-size:10px;color:var(--mu)">Select a lead</div>
+          </div>
+        </div><!-- /leadView -->
+      </div><!-- /main-panel -->
+    </div><!-- /worker-layout -->
+  </div><!-- /crmPanel -->
+</div><!-- /app -->
+
+<!-- ADD WORKER MODAL -->
+<div class="modal-bg hide" id="addWorkerModal">
+  <div class="modal">
+    <h2>➕ Add New Worker</h2>
+    <div class="form-row">
+      <div class="fg">
+        <label>Worker Name</label>
+        <input type="text" id="newWorkerName" placeholder="e.g. Abi, Ram, Priya…">
+      </div>
+      <div class="fg">
+        <label>Role</label>
+        <select id="newWorkerRole">
+          <option value="worker">Worker</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="fg">
+        <label>4-Digit Passkey</label>
+        <input type="text" id="newWorkerPasskey" placeholder="e.g. 1234" maxlength="4" inputmode="numeric" pattern="\d{4}">
+      </div>
+    </div>
+    <div style="background:rgba(108,92,231,.08);border:1px solid rgba(108,92,231,.2);border-radius:var(--rs);padding:10px 12px;font-size:11px;color:var(--mu);margin-bottom:4px">
+      🔒 The passkey protects this worker's profile. Share it only with them.
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addWorkerModal')">Cancel</button>
+      <button class="btn primary" onclick="addWorker()">Add Worker</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT SHEET MODAL -->
+<div class="modal-bg hide" id="editSheetModal">
+  <div class="modal">
+    <h2>✏️ Edit Sheet</h2>
+    <input type="hidden" id="editSheetId">
+    <div class="form-row">
+      <div class="fg">
+        <label>Sheet Name</label>
+        <input type="text" id="editSheetName" placeholder="Sheet name">
+      </div>
+      <div class="fg">
+        <label>Assign To Worker</label>
+        <select id="editSheetWorker"><option value="">— Select worker —</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" onclick="deleteSheet()">🗑️ Delete Sheet & Leads</button>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeModal('editSheetModal')">Cancel</button>
+      <button class="btn primary" onclick="saveEditSheet()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSKEY MODAL -->
+<div class="modal-bg hide" id="changePasskeyModal">
+  <div class="modal">
+    <h2>🔑 Change Passkey</h2>
+    <input type="hidden" id="changePasskeyWorkerId">
+    <p style="font-size:12px;color:var(--mu);margin-bottom:14px" id="changePasskeyFor"></p>
+    <div class="form-row single">
+      <div class="fg">
+        <label>New 4-Digit Passkey</label>
+        <input type="text" id="changePasskeyVal" placeholder="e.g. 5678" maxlength="4" inputmode="numeric">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('changePasskeyModal')">Cancel</button>
+      <button class="btn primary" onclick="savePasskeyChange()">💾 Update Passkey</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot" id="toastDot"></div><span id="toastMsg">—</span></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ══════════════════════════════════════════════════
+const SU = 'https://nwkoqyoakfyhdnezliil.supabase.co';
+const SK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53a29xeW9ha2Z5aGRuZXpsaWlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTUzNDQsImV4cCI6MjA5MzU5MTM0NH0.Ev0-6RprJKHSjbGijNJ8QY8xqKhsHFFEu1EY9dcMF7M';
+const SH = { 'Content-Type': 'application/json', 'apikey': SK, 'Authorization': 'Bearer ' + SK };
+
+const sGet  = (t, q = '') => fetch(`${SU}/rest/v1/${t}?${q}`, { headers: { ...SH, 'Prefer': 'count=exact' } }).then(r => r.json());
+const sPost = (t, d)       => fetch(`${SU}/rest/v1/${t}`, { method: 'POST', headers: { ...SH, 'Prefer': 'return=representation' }, body: JSON.stringify(d) }).then(r => r.json());
+const sPatch= (t, id, d)   => fetch(`${SU}/rest/v1/${t}?id=eq.${id}`, { method: 'PATCH', headers: SH, body: JSON.stringify(d) });
+const sDel  = (t, id)      => fetch(`${SU}/rest/v1/${t}?id=eq.${id}`, { method: 'DELETE', headers: SH });
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let curUser = '', curRole = '';
+let leads = [], filtered = [], workers = [], sheets = [], allLeads = [];
+let curLead = null, selOC = '', activeFilter = 'all';
+let pkTarget = null, pkEntry = '', pkResolve = null;
+
+const OC_COLORS = {
+  'Interested': '#00b894', 'Call Back': '#fdcb6e', 'Not Interested': '#ff7675',
+  'No Answer': '#8887a0', 'Busy': '#fdcb6e', 'Wrong Number': '#636e72', 'New': 'rgba(108,92,231,.5)'
+};
+
+// ══════════════════════════════════════════════════
+// PASSKEY SYSTEM
+// ══════════════════════════════════════════════════
+function showPasskey(worker) {
+  return new Promise(resolve => {
+    pkTarget = worker; pkEntry = ''; pkResolve = resolve;
+    updatePkDots();
+    document.getElementById('pkErr').textContent = '';
+    document.getElementById('pkUserLabel').textContent = (worker.role === 'admin' ? '👑 ' : '👤 ') + worker.name;
+    document.getElementById('pkOverlay').classList.remove('hide');
+  });
+}
+
+function pkPress(n) {
+  if (pkEntry.length >= 4) return;
+  pkEntry += String(n);
+  updatePkDots();
+  if (pkEntry.length === 4) setTimeout(checkPasskey, 150);
+}
+
+function pkClear() {
+  pkEntry = pkEntry.slice(0, -1);
+  updatePkDots();
+  document.getElementById('pkErr').textContent = '';
+}
+
+function pkCancel() {
+  document.getElementById('pkOverlay').classList.add('hide');
+  pkEntry = ''; pkTarget = null;
+  if (pkResolve) pkResolve(false);
+  pkResolve = null;
+}
+
+function updatePkDots() {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('d' + i);
+    d.classList.toggle('filled', i < pkEntry.length);
+    d.classList.remove('error');
+  }
+}
+
+function checkPasskey() {
+  const stored = String(pkTarget.passkey || '0000');
+  if (pkEntry === stored) {
+    document.getElementById('pkOverlay').classList.add('hide');
+    document.getElementById('pkErr').textContent = '';
+    const r = pkResolve; pkResolve = null;
+    const t = pkTarget; pkTarget = null; pkEntry = '';
+    if (r) r(true);
+  } else {
+    document.getElementById('pkErr').textContent = '❌ Wrong passkey, try again';
+    pkEntry = '';
+    // Shake dots
+    for (let i = 0; i < 4; i++) {
+      const d = document.getElementById('d' + i);
+      d.classList.add('error');
+      setTimeout(() => d.classList.remove('error'), 400);
+    }
+    setTimeout(updatePkDots, 50);
+  }
+}
+
+// Keyboard support for passkey
+document.addEventListener('keydown', e => {
+  if (document.getElementById('pkOverlay').classList.contains('hide')) return;
+  if (e.key >= '0' && e.key <= '9') pkPress(parseInt(e.key));
+  if (e.key === 'Backspace') pkClear();
+  if (e.key === 'Escape') pkCancel();
+});
+
+// ══════════════════════════════════════════════════
+// SPLASH — LOAD WORKERS
+// ══════════════════════════════════════════════════
+let allWorkersCache = [];
+
+async function initSplash() {
+  const ws = await sGet('workers', 'select=*&order=role.desc,id.asc'); // admins first
+  allWorkersCache = Array.isArray(ws) ? ws : [];
+  renderWorkerList(allWorkersCache);
+}
+
+function renderWorkerList(list) {
+  const grid = document.getElementById('workerGrid');
+  if (!list.length) {
+    grid.innerHTML = '<div class="no-workers">No workers found. Contact admin.</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  list.forEach(w => {
+    const isAdmin = w.role === 'admin';
+    const leadCount = ''; // Skip counting here for speed
+    const div = document.createElement('div');
+    div.className = 'worker-item' + (isAdmin ? ' admin-row' : '');
+    div.innerHTML = `
+      <span style="font-size:18px">${isAdmin ? '👑' : '👤'}</span>
+      <span class="wi-name">${escHtml(w.name)}</span>
+      <span class="worker-badge ${isAdmin ? 'badge-admin' : 'badge-worker'}">${isAdmin ? 'Admin' : 'Worker'}</span>`;
+    div.onclick = () => attemptLogin(w);
+    grid.appendChild(div);
+  });
+}
+
+function filterWorkerList() {
+  const q = (document.getElementById('splashSearch').value || '').toLowerCase().trim();
+  const filtered = q ? allWorkersCache.filter(w => w.name.toLowerCase().includes(q)) : allWorkersCache;
+  renderWorkerList(filtered);
+}
+
+async function attemptLogin(worker) {
+  const ok = await showPasskey(worker);
+  if (ok) loginAs(worker.name, worker.role);
+}
+
+// ══════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════
+async function loginAs(name, role) {
+  curUser = name; curRole = role;
+  const chip = document.getElementById('tbChip');
+  chip.textContent = (role === 'admin' ? '👑 ' : '👤 ') + name;
+  chip.className = 'tb-chip ' + (role === 'admin' ? 'chip-admin' : 'chip-worker');
+  document.getElementById('adminPanelBtn').style.display = role === 'admin' ? '' : 'none';
+  document.getElementById('sortSel').style.display = '';
+  document.getElementById('splash').classList.add('hide');
+  setTimeout(() => document.getElementById('app').classList.add('show'), 400);
+
+  if (role === 'admin') {
+    await loadAdminData();
+    showAdminView();
+  } else {
+    await loadWorkerLeads(name);
+    showCRMView();
+  }
+}
+
+// ══════════════════════════════════════════════════
+// ADMIN — DATA LOAD
+// ══════════════════════════════════════════════════
+async function loadAdminData() {
+  toast('☁️ Loading admin data…');
+  const [ws, ss, ls, al] = await Promise.all([
+    sGet('workers', 'select=*&order=role.desc,id.asc'),
+    sGet('sheets', 'select=*&order=created_at.desc'),
+    sGet('leads', 'select=*&limit=3000&order=no'),
+    sGet('activity_log', 'select=*&order=created_at.desc&limit=100'),
+  ]);
+  workers  = Array.isArray(ws) ? ws : [];
+  sheets   = Array.isArray(ss) ? ss : [];
+  allLeads = Array.isArray(ls) ? ls : [];
+  leads    = allLeads;
+  filtered = leads;
+  updateTopStats();
+  renderDashboard(al || []);
+  renderWorkersTable();
+  renderSheetsTable();
+  renderAllLeads();
+  populateWorkerSelects();
+  toast('✅ Admin data loaded!');
+}
+
+function updateTopStats() {
+  const total  = leads.length;
+  const called = leads.filter(l => l.called).length;
+  const hot    = leads.filter(l => l.overall_status === 'Interested').length;
+  document.getElementById('statTotal').textContent  = total;
+  document.getElementById('statCalled').textContent = called;
+  document.getElementById('statHot').textContent    = hot;
+  ['sfTotal','sfCalled','sfHot'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = [total, called, hot][i];
+  });
+  const sfShow = document.getElementById('sfShow');
+  if (sfShow) sfShow.textContent = filtered.length;
+}
+
+function renderDashboard(actLog) {
+  const called  = leads.filter(l => l.called).length;
+  const hot     = leads.filter(l => l.overall_status === 'Interested').length;
+  const cb      = leads.filter(l => l.overall_status === 'Call Back').length;
+  const pending = leads.filter(l => !l.called).length;
+
+  document.getElementById('dashStats').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${leads.length}</div><div class="stat-label">Total Leads</div><div class="stat-sub" style="color:var(--mu)">${sheets.length} sheets</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#00b894">${called}</div><div class="stat-label">Called</div><div class="stat-sub" style="color:var(--mu)">${pending} pending</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#fd79a8">${hot}</div><div class="stat-label">Interested 🔥</div><div class="stat-sub" style="color:var(--mu)">Hot leads</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#fdcb6e">${cb}</div><div class="stat-label">Call Back</div><div class="stat-sub" style="color:var(--mu)">Follow up needed</div></div>`;
+
+  // Worker performance
+  const workerStats = workers.map(w => {
+    const wL  = leads.filter(l => l.assigned_to === w.name);
+    const wC  = wL.filter(l => l.called).length;
+    const wH  = wL.filter(l => l.overall_status === 'Interested').length;
+    const pct = wL.length > 0 ? Math.round((wC / wL.length) * 100) : 0;
+    return { ...w, total: wL.length, called: wC, hot: wH, pct };
+  });
+
+  document.getElementById('workerPerfList').innerHTML = workerStats.filter(w => w.total > 0).map(w => `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:500">${w.role === 'admin' ? '👑' : '👤'} ${escHtml(w.name)}</span>
+        <span style="font-size:10px;color:var(--mu)">${w.called}/${w.total}</span>
+        <span style="font-size:10px;color:#fd79a8;margin-left:auto">🔥 ${w.hot}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="perf-bar"><div class="perf-fill" style="width:${w.pct}%"></div></div>
+        <span style="font-size:10px;color:var(--a2);min-width:32px">${w.pct}%</span>
+      </div>
+    </div>`).join('') || '<div style="font-size:12px;color:var(--mu2)">No leads assigned yet</div>';
+
+  // Status breakdown
+  const statuses = ['Interested', 'Call Back', 'Not Interested', 'No Answer', 'Busy', 'Wrong Number', 'New'];
+  document.getElementById('statusBreakdown').innerHTML = statuses.map(s => {
+    const count = leads.filter(l => (l.overall_status || 'New') === s).length;
+    if (!count) return '';
+    const clr = OC_COLORS[s] || OC_COLORS['New'];
+    const pct = Math.round((count / (leads.length || 1)) * 100);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:11px;min-width:110px;color:var(--tx)">${s}</span>
+      <div class="perf-bar"><div class="perf-fill" style="width:${pct}%;background:${clr}"></div></div>
+      <span style="font-size:11px;color:var(--mu);min-width:40px">${count}</span>
+    </div>`;
+  }).join('');
+
+  // Recent activity
+  document.getElementById('actBadge').textContent  = actLog.length;
+  document.getElementById('recentCount').textContent = actLog.length;
+  document.getElementById('recentActivity').innerHTML = actLog.slice(0, 12).map(a => {
+    const clr = a.action === 'call_logged' ? '#00b894' : a.action === 'wa_sent' ? '#25d366' : '#4a6cf7';
+    const ts  = fmtTime(a.created_at);
+    return `<div class="activity-item">
+      <div class="act-dot" style="background:${clr}"></div>
+      <div class="act-body">
+        <div class="act-text"><strong>${escHtml(a.worker_name || '—')}</strong> — ${escHtml(a.detail || a.action)}</div>
+        <div class="act-time">${ts}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--mu2)">No activity yet</div>';
+}
+
+function renderWorkersTable() {
+  document.getElementById('workersTbody').innerHTML = workers.map(w => {
+    const wL  = leads.filter(l => l.assigned_to === w.name);
+    const wC  = wL.filter(l => l.called).length;
+    const wH  = wL.filter(l => l.overall_status === 'Interested').length;
+    const hasKey = w.passkey && String(w.passkey).length === 4;
+    return `<tr>
+      <td style="font-weight:500">${w.role === 'admin' ? '👑 ' : '👤 '}${escHtml(w.name)}</td>
+      <td><span class="ob ${w.role === 'admin' ? 'ob-interested' : 'ob-noanswer'}">${w.role}</span></td>
+      <td>${wC} / ${wL.length}</td>
+      <td style="color:#fd79a8">${wH}</td>
+      <td><span class="ob ${w.is_active ? 'ob-interested' : 'ob-notinterested'}">${w.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td>
+        <span style="font-size:10px;color:${hasKey ? 'var(--green)' : 'var(--red)'};margin-right:6px">${hasKey ? '● Set' : '○ None'}</span>
+        <button class="btn sm warn" onclick="openChangePasskey(${w.id},'${escAttr(w.name)}')">🔑 Change</button>
+      </td>
+      <td>${w.role !== 'admin' ? `<button class="btn danger sm" onclick="removeWorker(${w.id},'${escAttr(w.name)}')">🗑️ Remove</button>` : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSheetsTable() {
+  const tbody   = document.getElementById('sheetsTbody');
+  const countEl = document.getElementById('sheetCount');
+  if (countEl) countEl.textContent = sheets.length;
+  tbody.innerHTML = sheets.map(s => {
+    const ts = new Date(s.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `<tr>
+      <td style="font-weight:500">${escHtml(s.name)}</td>
+      <td style="color:var(--a2)">${escHtml(s.assigned_to || 'Unassigned')}</td>
+      <td>${s.total_leads || 0}</td>
+      <td style="color:var(--mu)">${ts}</td>
+      <td>
+        <button class="btn warn sm" onclick="openEditSheet(${s.id},'${escAttr(s.name)}','${escAttr(s.assigned_to||'')}')">✏️ Edit</button>
+        <button class="btn danger sm" onclick="confirmDeleteSheet(${s.id})">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="color:var(--mu2);text-align:center;padding:20px">No sheets uploaded yet</td></tr>';
+}
+
+function renderAllLeads() {
+  const q  = (document.getElementById('allLeadsSearch').value || '').toLowerCase();
+  const wf = document.getElementById('allLeadsWorker').value;
+  const sf = document.getElementById('allLeadsStatus').value;
+  const rows = allLeads.filter(l => {
+    const mq = !q || [l.business, l.contact, l.city, l.service].some(v => (v || '').toLowerCase().includes(q));
+    const mw = !wf || (l.assigned_to || '') === wf;
+    const ms = !sf || (l.overall_status || 'New') === sf;
+    return mq && mw && ms;
+  });
+  const clr = s => OC_COLORS[s] || OC_COLORS['New'];
+  document.getElementById('allLeadsTbody').innerHTML = rows.slice(0, 150).map(l => `
+    <tr>
+      <td style="font-weight:500">${escHtml(l.business)}</td>
+      <td>${escHtml(l.contact)}</td>
+      <td>${escHtml(l.city)}</td>
+      <td><span class="tag s">${escHtml(l.service)}</span></td>
+      <td style="color:var(--a2)">${escHtml(l.assigned_to || '—')}</td>
+      <td><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;background:${clr(l.overall_status||'New')}22;color:${clr(l.overall_status||'New')}">${l.overall_status || 'New'}</span></td>
+      <td style="color:var(--a2)">${l.interest || 0}%</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--mu2);padding:20px">No leads found</td></tr>';
+}
+
+async function loadActivityLog() {
+  let q = 'order=created_at.desc&limit=200';
+  const wf = document.getElementById('actWorkerFilter').value;
+  const af = document.getElementById('actActionFilter').value;
+  if (wf) q += `&worker_name=eq.${encodeURIComponent(wf)}`;
+  if (af) q += `&action=eq.${af}`;
+  const logs = await sGet('activity_log', q);
+  document.getElementById('activityList').innerHTML = (Array.isArray(logs) ? logs : []).map(a => {
+    const clr = a.action === 'call_logged' ? '#00b894' : a.action === 'wa_sent' ? '#25d366' : '#4a6cf7';
+    return `<div class="activity-item">
+      <div class="act-dot" style="background:${clr}"></div>
+      <div class="act-body">
+        <div class="act-text"><strong>${escHtml(a.worker_name||'—')}</strong> → ${escHtml(a.lead_business||'—')} — ${escHtml(a.detail||a.action)}</div>
+        <div class="act-time">${fmtTime(a.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--mu2);padding:12px 0">No activity found</div>';
+}
+
+function populateWorkerSelects() {
+  const nonAdmin = workers.filter(w => w.role !== 'admin');
+  ['sheetWorker', 'actWorkerFilter', 'allLeadsWorker', 'editSheetWorker'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    const fv = el.options[0] ? el.options[0].value : '';
+    const ft = el.options[0] ? el.options[0].textContent : '';
+    el.innerHTML = `<option value="${fv}">${ft}</option>`;
+    nonAdmin.forEach(w => { const o = document.createElement('option'); o.value = w.name; o.textContent = w.name; el.appendChild(o); });
+  });
+}
+
+// ══════════════════════════════════════════════════
+// WORKERS CRUD
+// ══════════════════════════════════════════════════
+function openAddWorkerModal() {
+  document.getElementById('newWorkerName').value = '';
+  document.getElementById('newWorkerPasskey').value = '';
+  document.getElementById('newWorkerRole').value = 'worker';
+  document.getElementById('addWorkerModal').classList.remove('hide');
+  setTimeout(() => document.getElementById('newWorkerName').focus(), 100);
+}
+
+async function addWorker() {
+  const name    = document.getElementById('newWorkerName').value.trim();
+  const role    = document.getElementById('newWorkerRole').value;
+  const passkey = document.getElementById('newWorkerPasskey').value.trim();
+  if (!name)              { toast('⚠️ Enter a worker name!'); return; }
+  if (!/^\d{4}$/.test(passkey)) { toast('⚠️ Passkey must be exactly 4 digits!'); return; }
+  if (workers.find(w => w.name.toLowerCase() === name.toLowerCase())) { toast('⚠️ A worker with this name already exists!'); return; }
+  await sPost('workers', [{ name, role, is_active: true, passkey }]);
+  await logActivity('worker_added', 'worker', null, null, `Added new ${role}: ${name}`);
+  closeModal('addWorkerModal');
+  await loadAdminData();
+  await initSplash();
+  toast(`✅ ${name} added as ${role}!`);
+}
+
+async function removeWorker(id, name) {
+  if (!confirm(`Remove ${name} from the team? Their leads will remain in the system.`)) return;
+  await sDel('workers', id);
+  await loadAdminData();
+  await initSplash();
+  toast(`${name} removed.`);
+}
+
+function openChangePasskey(id, name) {
+  document.getElementById('changePasskeyWorkerId').value = id;
+  document.getElementById('changePasskeyFor').textContent = `Changing passkey for: ${name}`;
+  document.getElementById('changePasskeyVal').value = '';
+  document.getElementById('changePasskeyModal').classList.remove('hide');
+  setTimeout(() => document.getElementById('changePasskeyVal').focus(), 100);
+}
+
+async function savePasskeyChange() {
+  const id = document.getElementById('changePasskeyWorkerId').value;
+  const pk = document.getElementById('changePasskeyVal').value.trim();
+  if (!/^\d{4}$/.test(pk)) { toast('⚠️ Passkey must be exactly 4 digits!'); return; }
+  await sPatch('workers', id, { passkey: pk });
+  closeModal('changePasskeyModal');
+  await loadAdminData();
+  await initSplash();
+  toast('🔑 Passkey updated successfully!');
+}
+
+// ══════════════════════════════════════════════════
+// SHEETS CRUD
+// ══════════════════════════════════════════════════
+function openEditSheet(id, name, assignedTo) {
+  document.getElementById('editSheetId').value = id;
+  document.getElementById('editSheetName').value = name;
+  populateWorkerSelects();
+  setTimeout(() => {
+    const sel = document.getElementById('editSheetWorker');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === assignedTo) { sel.selectedIndex = i; break; }
+    }
+  }, 60);
+  document.getElementById('editSheetModal').classList.remove('hide');
+}
+
+async function saveEditSheet() {
+  const id     = document.getElementById('editSheetId').value;
+  const name   = document.getElementById('editSheetName').value.trim();
+  const worker = document.getElementById('editSheetWorker').value;
+  if (!name) { toast('⚠️ Sheet name is required!'); return; }
+  await sPatch('sheets', id, { name, assigned_to: worker || null });
+  if (worker) {
+    await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`, { method: 'PATCH', headers: SH, body: JSON.stringify({ assigned_to: worker }) });
+  }
+  closeModal('editSheetModal');
+  await loadAdminData();
+  toast('✅ Sheet updated!');
+}
+
+async function deleteSheet() {
+  const id = document.getElementById('editSheetId').value;
+  if (!confirm('Delete this sheet and ALL its leads? This cannot be undone.')) return;
+  await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`, { method: 'DELETE', headers: SH });
+  await sDel('sheets', id);
+  closeModal('editSheetModal');
+  await loadAdminData();
+  toast('🗑️ Sheet and leads deleted.');
+}
+
+async function confirmDeleteSheet(id) {
+  if (!confirm('Delete this sheet and ALL its leads? This cannot be undone.')) return;
+  await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`, { method: 'DELETE', headers: SH });
+  await sDel('sheets', id);
+  await loadAdminData();
+  toast('🗑️ Sheet deleted.');
+}
+
+// ══════════════════════════════════════════════════
+// EXCEL UPLOAD (Admin only, from Sheets page)
+// ══════════════════════════════════════════════════
+const sdz = document.getElementById('sheetDropZone');
+if (sdz) {
+  sdz.addEventListener('dragover', e => { e.preventDefault(); sdz.classList.add('drag'); });
+  sdz.addEventListener('dragleave', () => sdz.classList.remove('drag'));
+  sdz.addEventListener('drop', e => {
+    e.preventDefault(); sdz.classList.remove('drag');
+    uploadSheetFile(e.dataTransfer.files[0]);
+  });
+}
+
+async function uploadSheetFile(file) {
+  if (!file) return;
+  if (curRole !== 'admin') { toast('⚠️ Only Admin can upload sheets!'); return; }
+  const sname  = document.getElementById('sheetName').value.trim() || file.name.replace(/\.(xlsx|xls)$/i, '');
+  const worker = document.getElementById('sheetWorker').value;
+  if (!worker) { toast('⚠️ Please select a worker to assign this sheet to!'); return; }
+  const pw  = document.getElementById('sheetProgWrap');
+  const pf  = document.getElementById('sheetProgFill');
+  const pm  = document.getElementById('sheetProgMsg');
+  pw.classList.add('show'); pf.style.width = '0%';
+  pm.textContent = 'Reading file…';
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'array' });
+      const sn   = wb.SheetNames.find(n => /follow.?up|tracker/i.test(n)) || wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '' })
+                       .filter(r => r['Business Name'] || r['Contact Person']);
+      if (!rows.length) { pm.textContent = '❌ No valid rows found. Check column names.'; return; }
+      pm.textContent = `Found ${rows.length} leads. Creating sheet…`;
+      const sheetRec = await sPost('sheets', [{ name: sname, uploaded_by: curUser, assigned_to: worker, total_leads: rows.length }]);
+      const sheetId  = Array.isArray(sheetRec) && sheetRec[0] ? sheetRec[0].id : null;
+      const batch = 50;
+      for (let i = 0; i < rows.length; i += batch) {
+        const chunk = rows.slice(i, i + batch).map((r, j) => ({
+          no: parseInt(r['No']) || (i + j + 1),
+          business:       String(r['Business Name']   || '—'),
+          industry:       String(r['Industry']         || '—'),
+          city:           String(r['City']             || '—'),
+          contact:        String(r['Contact Person']   || '—'),
+          phone:          String(r['Phone']            || ''),
+          email:          String(r['Email']            || ''),
+          service:        String(r['Service Needed']   || '—'),
+          interest:       parseInt(r['Interest %'])    || 0,
+          priority:       String(r['Priority']         || 'Medium'),
+          overall_status: 'New',
+          stage:          'Lead',
+          wa_sent: false, email_sent: false, called: false,
+          sheet_id: sheetId, assigned_to: worker,
+        }));
+        await sPost('leads', chunk);
+        const pct = Math.min(Math.round(((i + batch) / rows.length) * 100), 100);
+        pf.style.width = pct + '%';
+        pm.textContent = `Uploading… ${Math.min(i + batch, rows.length)} / ${rows.length}`;
+      }
+      pm.textContent = `✅ ${rows.length} leads saved for ${worker}!`;
+      await logActivity('sheet_upload', 'sheet', null, null, `Uploaded "${sname}" (${rows.length} leads) → ${worker}`);
+      setTimeout(() => { pw.classList.remove('show'); loadAdminData(); }, 1500);
+    } catch (err) {
+      pm.textContent = '❌ Error: ' + err.message;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══════════════════════════════════════════════════
+// WORKER LEADS
+// ══════════════════════════════════════════════════
+async function loadWorkerLeads(workerName) {
+  toast('☁️ Loading your leads…');
+  const data = await sGet('leads', `select=*&assigned_to=eq.${encodeURIComponent(workerName)}&limit=2000&order=no`);
+  leads = Array.isArray(data) && data.length ? data : [];
+  filtered = leads;
+  updateTopStats();
+  applyFilters();
+  toast(`✅ ${leads.length} leads loaded!`);
+}
+
+// ══════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════
+function showAdminView() {
+  document.getElementById('adminPanel').style.display = 'flex';
+  document.getElementById('crmPanel').style.display   = 'none';
+}
+
+function showCRMView() {
+  document.getElementById('adminPanel').style.display = 'none';
+  document.getElementById('crmPanel').style.display   = 'flex';
+  document.getElementById('sortSel').style.display    = '';
+  applyFilters();
+}
+
+function toggleAdminPanel() {
+  const ap = document.getElementById('adminPanel');
+  const cp = document.getElementById('crmPanel');
+  if (ap.style.display === 'none') { ap.style.display = 'flex'; cp.style.display = 'none'; }
+  else                             { ap.style.display = 'none';  cp.style.display = 'flex'; }
+}
+
+function showAdminPage(page, el) {
+  document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('show'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + page);
+  if (pg) pg.classList.add('show');
+  if (el) el.classList.add('active');
+  if (page === 'activity') loadActivityLog();
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hide'); }
+
+// ══════════════════════════════════════════════════
+// CRM FILTERS
+// ══════════════════════════════════════════════════
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.fc').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const q    = (document.getElementById('searchInput') ? document.getElementById('searchInput').value : '').toLowerCase();
+  const sort = document.getElementById('sortSel') ? document.getElementById('sortSel').value : 'uncalled';
+
+  filtered = leads.filter(l => {
+    const mq = !q || [l.business, l.contact, l.city, l.service, l.industry].some(v => (v || '').toLowerCase().includes(q));
+    let mf = true;
+    if      (activeFilter === 'uncalled')      mf = !l.called;
+    else if (activeFilter === 'Interested')    mf = l.overall_status === 'Interested';
+    else if (activeFilter === 'Not Interested')mf = l.overall_status === 'Not Interested';
+    else if (activeFilter === 'Call Back')     mf = l.overall_status === 'Call Back';
+    else if (activeFilter === 'High')          mf = (l.priority || '').toLowerCase() === 'high';
+    return mq && mf;
+  });
+
+  filtered.sort((a, b) => {
+    if (sort === 'uncalled') return (a.called ? 1 : 0) - (b.called ? 1 : 0);
+    if (sort === 'interest') return (b.interest || 0) - (a.interest || 0);
+    if (sort === 'priority') return ((a.priority || '').toLowerCase() === 'high' ? 0 : 1) - ((b.priority || '').toLowerCase() === 'high' ? 0 : 1);
+    return (a.business || '').localeCompare(b.business || '');
+  });
+
+  const sfShow = document.getElementById('sfShow');
+  if (sfShow) sfShow.textContent = filtered.length;
+  updateTopStats();
+  renderList();
+}
+
+function renderList() {
+  const list = document.getElementById('leadList');
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu2);font-size:12px">No leads match</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(l => {
+    const sc       = OC_COLORS[l.overall_status] || OC_COLORS['New'];
+    const isActive = curLead && curLead.id === l.id;
+    const priClass = (l.priority || 'medium').toLowerCase();
+    return `<div class="li${isActive ? ' active' : ''}${l.called ? ' called' : ''}" onclick="selectLead(${l.id})">
+      <div class="li-top">
+        <div class="li-name">${escHtml(l.business)}</div>
+        <div class="pd ${priClass}"></div>
+      </div>
+      <div class="li-meta">${escHtml(l.contact || '—')} · ${escHtml(l.city || '—')}</div>
+      <div class="li-tags">
+        <span class="tag s">${escHtml(l.service || '—')}</span>
+        <span class="tag">${l.interest || 0}%</span>
+        ${l.called ? '<span class="tag" style="color:#00b894;border-color:rgba(0,184,148,.2)">📞</span>' : ''}
+        ${l.follow_up_date ? '<span class="tag" style="color:#fdcb6e;border-color:rgba(253,203,110,.2)">📅</span>' : ''}
+      </div>
+      ${l.overall_status && l.overall_status !== 'New'
+        ? `<div class="li-status-badge" style="background:${sc}22;color:${sc};border:1px solid ${sc}44">${l.overall_status}</div>`
+        : ''}
+    </div>`;
+  }).join('');
+}
+
+async function selectLead(id) {
+  curLead = leads.find(l => l.id === id);
+  if (!curLead) return;
+  renderList();
+  renderLeadView(curLead);
+  loadHistory(id);
+  if (window.innerWidth <= 768) document.getElementById('mainPanel').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ══════════════════════════════════════════════════
+// LEAD VIEW RENDER
+// ══════════════════════════════════════════════════
+function fn(n) { return (n || '').split(' ')[0] || 'them'; }
+
+function renderLeadView(l) {
+  const svc     = getSvc(l.service);
+  const ini     = (l.business || '').split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '??';
+  const subject = getSubject(l);
+  const st      = l.overall_status || 'New';
+  const sc      = OC_COLORS[st] || OC_COLORS['New'];
+
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('leadView').style.display    = 'flex';
+  document.getElementById('lhAv').textContent          = ini;
+  document.getElementById('lhName').textContent        = l.business;
+  const mapLink = (l.notes && l.notes.startsWith('Map: ')) ? l.notes.replace('Map: ','') : null;
+  document.getElementById('lhMeta').textContent        = `${l.industry} · ${l.city} · ${l.contact} · 📞 ${l.phone || '—'}`;
+  document.getElementById('lhBar').style.width         = (l.interest || 0) + '%';
+  document.getElementById('lhPct').textContent         = (l.interest || 0) + '%';
+  document.getElementById('lhPri').textContent         = (l.priority || 'Medium') + ' priority';
+
+  const sb = document.getElementById('lhStat');
+  sb.textContent = st;
+  sb.style.cssText = `background:${sc}22;color:${sc};border:1px solid ${sc}44;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;text-transform:uppercase;margin-left:6px`;
+
+  const waPhone = (l.phone || '').replace(/\D/g, '');
+  const waNum   = waPhone.startsWith('91') ? waPhone : '91' + waPhone;
+  const waUrl   = `https://wa.me/${waNum}?text=${encodeURIComponent(buildWAEN(l))}`;
+  const isIOS   = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const smsUrl  = `sms:${l.phone || ''}${isIOS ? '&' : '?'}body=${encodeURIComponent(buildSMS(l))}`;
+
+  document.getElementById('lhActs').innerHTML = `
+    <a href="tel:${l.phone || ''}" class="call-btn" onclick="markCalled(${l.id})">📞 Call ${escHtml(fn(l.contact))}</a>
+    <a href="${waUrl}" target="_blank" class="btn wa" onclick="markWA(${l.id},event)">💬 WhatsApp</a>
+    <a href="${smsUrl}" class="btn sms-b">📱 SMS</a>
+    ${mapLink ? `<a href="${mapLink}" target="_blank" class="btn" style="background:rgba(74,108,247,.1);border-color:rgba(74,108,247,.3);color:var(--blue)">🗺️ Map</a>` : ''}
+    <button class="btn" style="background:rgba(234,67,53,.12);border-color:rgba(234,67,53,.25);color:#ea4335" onclick="openGmail()">📧 Gmail</button>
+    <button class="btn" onclick="copyHTML()">📋 Copy HTML</button>`;
+
+  document.getElementById('emailMeta').innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:4px">
+      <span style="color:var(--mu2);min-width:48px;font-size:9px;text-transform:uppercase;letter-spacing:.4px">To</span>
+      <span>${escHtml(l.contact)} &lt;${escHtml(l.email || '—')}&gt;</span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <span style="color:var(--mu2);min-width:48px;font-size:9px;text-transform:uppercase;letter-spacing:.4px">Subject</span>
+      <span style="font-weight:500">${escHtml(subject)}</span>
+    </div>`;
+
+  const frame = document.getElementById('emailFrame');
+  const doc   = frame.contentDocument || frame.contentWindow.document;
+  doc.open(); doc.write(buildHTML(l)); doc.close();
+  setTimeout(() => { try { frame.style.minHeight = (doc.body.scrollHeight + 20) + 'px'; } catch (e) {} }, 500);
+
+  document.getElementById('msg-wa-en').textContent = buildWAEN(l);
+  document.getElementById('msg-wa-ta').textContent = buildWATN(l);
+  document.getElementById('msg-sms').textContent   = buildSMS(l);
+
+  selOC = '';
+  document.querySelectorAll('.oc').forEach(o => o.classList.remove('sel'));
+  document.getElementById('logNotes').value = '';
+  document.getElementById('logDate').value  = l.follow_up_date || '';
+  document.getElementById('logTime').value  = '';
+
+  switchTab('call', document.querySelector('.tab'));
+
+  document.getElementById('actionBar').innerHTML = `
+    <div style="font-size:10px;color:var(--mu)">#${l.no} · ${l.priority || 'Medium'} · ${l.interest || 0}% · ${l.called ? '📞 Called' : 'Not called'}</div>
+    <div class="spacer"></div>
+    <button class="btn" onclick="copyHTML()" style="font-size:10px">📋 Copy HTML</button>
+    <button class="btn success" onclick="saveLog()" style="font-size:11px">💾 Save Log</button>`;
+}
+
+async function markCalled(id) {
+  await sPatch('leads', id, { called: true });
+  const l = leads.find(x => x.id === id); if (l) l.called = true;
+  await logActivity('call_started', 'lead', id, l ? l.business : '', `Started call with ${l ? l.contact : 'lead'}`);
+  renderList(); updateTopStats();
+  toast('📞 Call started! Log the outcome below.');
+}
+
+async function markWA(id, e) {
+  await sPatch('leads', id, { wa_sent: true });
+  const l = leads.find(x => x.id === id);
+  await logActivity('wa_sent', 'lead', id, l ? l.business : '', `WhatsApp sent to ${l ? l.contact : 'lead'}`);
+  toast('💬 WhatsApp opened & marked as sent!');
+}
+
+function pickOC(el) {
+  document.querySelectorAll('.oc').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  selOC = el.dataset.v;
+}
+
+async function saveLog() {
+  if (!curLead) { toast('⚠️ Select a lead first!'); return; }
+  if (!selOC)   { toast('⚠️ Please pick a call outcome first!'); return; }
+  const notes = document.getElementById('logNotes').value;
+  const fd    = document.getElementById('logDate').value;
+  const ft    = document.getElementById('logTime').value;
+
+  await sPost('call_logs', [{ lead_id: curLead.id, called_by: curUser, call_outcome: selOC, notes: notes || null, follow_up_date: fd || null, follow_up_time: ft || null, called_at: new Date().toISOString() }]);
+  await sPatch('leads', curLead.id, { called: true, overall_status: selOC, notes: notes || null, follow_up_date: fd || null, updated_at: new Date().toISOString() });
+  await logActivity('call_logged', 'lead', curLead.id, curLead.business, `Call outcome: ${selOC}${notes ? ' — ' + notes.substring(0, 60) : ''}`);
+
+  Object.assign(curLead, { called: true, overall_status: selOC, notes, follow_up_date: fd || null });
+  leads    = leads.map(l => l.id === curLead.id ? { ...l, ...curLead } : l);
+  if (curRole === 'admin') allLeads = allLeads.map(l => l.id === curLead.id ? { ...l, ...curLead } : l);
+
+  renderList(); updateTopStats(); renderLeadView(curLead); loadHistory(curLead.id);
+  toast('✅ Call logged: ' + selOC);
+  switchTab('hist', document.querySelectorAll('.tab')[5]);
+}
+
+async function loadHistory(leadId) {
+  const logs = await sGet('call_logs', `lead_id=eq.${leadId}&order=called_at.desc`);
+  const c    = document.getElementById('callHist');
+  if (!Array.isArray(logs) || !logs.length) {
+    c.innerHTML = '<div style="color:var(--mu2);font-size:12px">No calls logged yet.</div>';
+    return;
+  }
+  c.innerHTML = logs.map(log => {
+    const clr = OC_COLORS[log.call_outcome] || '#8887a0';
+    return `<div class="chi fu">
+      <div class="chi-top">
+        <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:100px;background:${clr}22;color:${clr};border:1px solid ${clr}44">${log.call_outcome}</span>
+        <span class="chi-time">${fmtTime(log.called_at)}</span>
+      </div>
+      ${log.notes ? `<div class="chi-note">${escHtml(log.notes)}</div>` : ''}
+      ${log.follow_up_date ? `<div class="chi-note" style="color:var(--a2);margin-top:4px">📅 Follow-up: ${log.follow_up_date}${log.follow_up_time ? ' at ' + log.follow_up_time : ''}</div>` : ''}
+      <div class="chi-by">👤 ${escHtml(log.called_by || '—')}</div>
+    </div>`;
+  }).join('');
+}
+
+async function logActivity(action, type, leadId, leadBusiness, detail) {
+  try {
+    await sPost('activity_log', [{ worker_name: curUser, action, lead_id: leadId || null, lead_business: leadBusiness || null, detail, created_at: new Date().toISOString() }]);
+  } catch (e) { /* silent */ }
+}
+
+// ══════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('show'));
+  if (el) el.classList.add('active');
+  else {
+    // Find the tab by content id match
+    const tabs = document.querySelectorAll('.tab');
+    const names = ['call','email','wa-en','wa-ta','sms','hist'];
+    const idx = names.indexOf(tab);
+    if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active');
+  }
+  const tc = document.getElementById('tab-' + tab);
+  if (tc) tc.classList.add('show');
+}
+
+// ══════════════════════════════════════════════════
+// TEMPLATE ENGINE
+// ══════════════════════════════════════════════════
+const openers = {
+  'Hospital/Clinic':   'Patients search online before booking. Make sure your clinic is the first they find.',
+  'Restaurant/Food':   'Customers check menus online before stepping in. Your digital presence is your first table.',
+  'Coaching Centre':   'Students and parents research online before enrolling. Stand out before they even call.',
+  'IT/Software':       'In a competitive tech space, your digital brand is your biggest differentiator.',
+  'Logistics':         'Clients vet logistics partners online. Make sure your operation looks credible and professional.',
+  'Hardware':          'Customers search hardware suppliers online before walking in. Your website is your storefront.',
+  'Automobile':        'Buyers research online for weeks before visiting. Capture them at the research stage.',
+  'Manufacturing':     'B2B buyers research deeply before partnering. Your online presence closes deals before you pitch.',
+  'Finance/Insurance': 'Trust is everything — online credibility builds it before a single meeting.',
+  'Pharmacy':          'Patients look up pharmacies online. A strong presence means more footfall.',
+  'Printing':          'Businesses search print vendors online. A professional presence wins before you even quote.',
+  'default':           'Your customers are online right now looking for what you offer. Make sure they find you first.',
+};
+
+const svcs = {
+  'Web Dev': {
+    icon: '🌐', title: 'Website Development',
+    pitch: 'a professional website that attracts customers 24/7 — fast, mobile-first, built to convert.',
+    checks: ['✅ Custom design matching your brand identity', '✅ Mobile-first & lightning-fast performance', '✅ SEO-optimized to rank in your city on Google', '✅ Lead capture forms & WhatsApp integration'],
+    waEN: ['🌐 Custom professional website tailored to your brand', '⚡ Mobile-first & blazing fast — Google-ready', '🔍 Local SEO to rank your business in your city', '📲 WhatsApp & lead capture integration built-in'],
+    waTN: ['🌐 Ungal brand-ku match aagra professional website', '⚡ Mobile-first, super fast — Google-ready', '🔍 Ungal city-la Google-la rank aagum', '📲 WhatsApp & lead form integration'],
+  },
+  'App Dev': {
+    icon: '📱', title: 'Mobile App Development',
+    pitch: 'a custom mobile app so your customers can reach you anytime, from anywhere.',
+    checks: ['✅ Android & iOS cross-platform build', '✅ Push notifications & customer loyalty program', '✅ Works offline for low-connectivity areas', '✅ Full app store launch, branding & support'],
+    waEN: ['📱 Custom Android & iOS app — your brand, your app', '🔔 Push notifications to keep customers engaged', '📶 Works offline — perfect for Tamil Nadu conditions', '🏪 Full app store setup, launch & ongoing support'],
+    waTN: ['📱 Ungal brand-ku custom Android & iOS app', '🔔 Push notifications — customers engaged vaippom', '📶 Offline-la kuda work aagum', '🏪 App store launch & full support'],
+  },
+  'AI Automation': {
+    icon: '🤖', title: 'AI Automation',
+    pitch: 'intelligent automation that saves your team 20–30 hours every single week.',
+    checks: ['✅ AI chatbot for 24/7 customer support & queries', '✅ Automated lead generation & follow-up sequences', '✅ Invoice, email & document workflow automation', '✅ Custom AI dashboards & real-time reporting'],
+    waEN: ['🤖 AI chatbot — handles customer queries 24/7 for you', '📊 Automated lead generation & smart follow-up sequences', '📄 Invoice, email & document automation — zero manual work', '📈 Custom dashboards with real-time business insights'],
+    waTN: ['🤖 24/7 customer queries-ku AI chatbot — automatic-a handle aagum', '📊 Automated lead generation & follow-up — manual illa', '📄 Invoice & email automation — zero effort', '📈 Real-time business dashboards'],
+  },
+  'Digital Marketing': {
+    icon: '📣', title: 'Digital Marketing & SEO',
+    pitch: 'a full digital marketing system driving real qualified leads to your business every month.',
+    checks: ['✅ Google Ads & Meta (Facebook/Instagram) campaigns', '✅ Local SEO — rank #1 in your city on Google', '✅ Social media content creation & management', '✅ Monthly analytics & ROI performance reports'],
+    waEN: ['📣 Google Ads & Meta campaigns — real leads, real ROI', '🔍 Local SEO — rank your business #1 in your city', '📱 Social media content creation & full management', '📊 Monthly analytics reports showing exact ROI'],
+    waTN: ['📣 Google & Meta Ads — real leads varum', '🔍 Ungal city-la Google-la #1 rank aaguvom', '📱 Social media content & full management', '📊 Monthly ROI reports'],
+  },
+  'All Digital Services': {
+    icon: '✨', title: 'Complete Digital Transformation',
+    pitch: 'website, mobile app, AI automation & marketing — all working together for your growth.',
+    checks: ['✅ Website + Mobile App complete combo package', '✅ AI-powered workflow automation for your team', '✅ Full SEO & paid advertising setup & management', '✅ Ongoing maintenance, support & business growth'],
+    waEN: ['🌐 Website + 📱 App — complete digital presence', '🤖 AI automation — your team saves 20+ hours/week', '📣 Full SEO & paid ad campaigns for maximum reach', '🛡️ Ongoing support, maintenance & growth strategy'],
+    waTN: ['🌐 Website + 📱 App combo — complete package', '🤖 AI automation — team time malichukovom', '📣 Full SEO & ads — maximum reach', '🛡️ Ongoing support & growth'],
+  },
+};
+
+function getSvc(s) {
+  s = s || '';
+  for (const k of Object.keys(svcs)) if (s.toLowerCase().includes(k.toLowerCase())) return svcs[k];
+  return svcs['Web Dev'];
+}
+function getOpener(ind) {
+  for (const k of Object.keys(openers)) if ((ind || '').toLowerCase().includes(k.toLowerCase())) return openers[k];
+  return openers['default'];
+}
+function getUrgency() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Would love to connect this morning — just 10 minutes of your time!'
+       : h < 17 ? 'Let\'s connect this afternoon — I\'ll keep it brief and valuable!'
+       :           'End your day with a quick win — let\'s talk digital growth!';
+}
+function getSubject(l) { return `${getSvc(l.service).icon} Digital Growth for ${l.business} — Rturox Technology`; }
+
+function buildWAEN(l) {
+  const s = getSvc(l.service);
+  return `Hi ${fn(l.contact)} 👋,\n\nI'm *Mathavan*, Founder of *Rturox Technology* — we build digital solutions for businesses like *${l.business}*.\n\n*Here's what we can do for you:*\n${s.waEN.join('\n')}\n\nWe've helped 20+ businesses across Tamil Nadu grow faster online. Would love to show you what we can build for *${l.business}* specifically.\n\n📞 Quick 10-min call?\n\n*Mathavan | Rturox Technology*\nrturox.com | +91 63811 69124`;
+}
+function buildWATN(l) {
+  const s = getSvc(l.service);
+  return `Vanakkam ${fn(l.contact)} 🙏,\n\n*Mathavan* pesuren — *Rturox Technology* la irundhu. Ungal business *${l.business}*-ku digital growth pannuvom.\n\n*Ungalukku panrom:*\n${s.waTN.join('\n')}\n\nTamil Nadu-la 20+ clients-ku work panni irukkom. Ungalukku enna pannom nu personally discuss pannalam.\n\n📞 10 nimisham time iruka?\n\n*Mathavan | Rturox Technology*\nrturox.com | +91 63811 69124`;
+}
+function buildSMS(l) {
+  const s = getSvc(l.service);
+  return `Hi ${fn(l.contact)}, I'm Mathavan from Rturox Technology. We specialize in ${s.title} for businesses like ${l.business}. Helped 20+ Tamil Nadu businesses grow online. Quick call? +91 63811 69124 | rturox.com`;
+}
+
+function buildHTML(l) {
+  const s = getSvc(l.service); const opener = getOpener(l.industry); const urgency = getUrgency(); const name = fn(l.contact);
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0"><tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;max-width:600px">
+<tr><td style="background:linear-gradient(135deg,#1a1f36 0%,#2d3561 100%);padding:36px 44px;text-align:center">
+  <div style="color:#fff;font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px">Rturox Technology</div>
+  <div style="color:rgba(255,255,255,.55);font-size:11px;letter-spacing:.12em;text-transform:uppercase">End-to-End Digital Solutions · Coimbatore</div>
+</td></tr>
+<tr><td style="padding:36px 44px">
+  <p style="font-size:20px;font-weight:700;color:#1a1f36;margin:0 0 16px">Hi <strong>${name}</strong> 👋,</p>
+  <p style="font-size:14px;line-height:1.85;color:#555;margin:0 0 12px">${opener}</p>
+  <p style="font-size:14px;line-height:1.85;color:#444;margin:0 0 12px">I'm <strong>Mathavan</strong>, Founder &amp; CEO of <strong>Rturox Technology</strong>. We help businesses like <strong>${l.business}</strong> grow faster with smart, results-driven digital solutions.</p>
+  <p style="font-size:14px;line-height:1.85;color:#444;margin:0 0 24px">I reached out personally because I see a strong opportunity — specifically around <strong>${s.title}</strong> for <strong>${l.business}</strong>.</p>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-left:4px solid #4a6cf7;border-radius:0 10px 10px 0;margin-bottom:26px"><tr><td style="padding:20px 22px">
+    <div style="font-size:15px;font-weight:700;color:#4a6cf7;margin-bottom:14px">${s.icon} What we'll build for ${l.business}:</div>
+    ${s.checks.map(c => `<div style="font-size:13px;color:#333;padding:5px 0;line-height:1.7">${c}</div>`).join('')}
+  </td></tr></table>
+  <p style="font-size:14px;line-height:1.85;color:#444;margin:0 0 12px">We've delivered <strong>20+ successful projects</strong> for happy clients across Tamil Nadu — and we'd love to make <strong>${l.business}</strong> our next success story! 🌟</p>
+  <p style="font-size:14px;line-height:1.85;color:#444;margin:0 0 26px">${urgency}</p>
+  <div style="text-align:center;margin-bottom:24px">
+    <a href="https://rturox.com/" style="display:inline-block;background:#4a6cf7;color:#fff;padding:14px 22px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:700;margin:4px">🌐 Visit Rturox.com</a>
+    <a href="https://maddy-portfolio-azure.vercel.app/" style="display:inline-block;background:#1a1f36;color:#fff;padding:14px 22px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:700;margin:4px">🔗 View Portfolio</a>
+  </div>
+  <p style="font-size:13px;color:#888;text-align:center;margin:0 0 8px">Feel free to reply or reach out anytime 🤝</p>
+  <p style="font-size:14px;color:#444;text-align:center;margin:0 0 24px">Looking forward to hearing from you,</p>
+  <table cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;width:100%"><tr><td style="padding-top:22px">
+    <div style="font-size:20px;font-weight:800;color:#1a1f36;margin-bottom:3px">Mathavan</div>
+    <div style="font-size:13px;color:#777;margin-bottom:14px">Founder &amp; CEO — Rturox Technology</div>
+    <div style="margin-bottom:5px"><a href="tel:+916381169124" style="font-size:13px;color:#4a6cf7;text-decoration:none">📱 +91 63811 69124</a></div>
+    <div style="margin-bottom:5px"><a href="https://rturox.com" style="font-size:13px;color:#4a6cf7;text-decoration:none">🌐 rturox.com</a></div>
+    <div><a href="mailto:rturoxtech@gmail.com" style="font-size:13px;color:#4a6cf7;text-decoration:none">📧 rturoxtech@gmail.com</a></div>
+  </td></tr></table>
+</td></tr>
+<tr><td style="background:#f8f8f8;padding:14px 44px;text-align:center;border-top:1px solid #eee">
+  <p style="font-size:11px;color:#bbb;margin:0">© 2025 Rturox Technology · Coimbatore, Tamil Nadu 🇮🇳</p>
+</td></tr></table>
+</td></tr></table></body></html>`;
+}
+
+// ══════════════════════════════════════════════════
+// OUTREACH ACTIONS
+// ══════════════════════════════════════════════════
+function openGmail() {
+  if (!curLead) return;
+  const subject = getSubject(curLead);
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(curLead.email || '')}&su=${encodeURIComponent(subject)}`, '_blank');
+  sPatch('leads', curLead.id, { email_sent: true });
+  logActivity('email_sent', 'lead', curLead.id, curLead.business, `Gmail opened for ${curLead.contact}`);
+  toast('📧 Gmail opened! Click "📋 Copy HTML" then paste into the compose body.');
+}
+
+function copyHTML() {
+  if (!curLead) return;
+  navigator.clipboard.writeText(buildHTML(curLead))
+    .then(() => toast('📋 HTML email copied! Paste into Gmail compose — renders as styled email.'));
+}
+
+function copyMsg(type) {
+  if (!curLead) return;
+  const m = { 'wa-en': buildWAEN, 'wa-ta': buildWATN, 'sms': buildSMS };
+  navigator.clipboard.writeText(m[type](curLead)).then(() => toast('📋 Copied to clipboard!'));
+}
+
+// ══════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════
+function toast(msg, dur = 3500) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  const isErr = msg.includes('⚠️') || msg.includes('❌');
+  document.getElementById('toastDot').style.background = isErr ? 'var(--red)' : 'var(--green)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(str) {
+  return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+function resetApp() {
+  if (!confirm('Exit to login screen?')) return;
+  curUser = ''; curRole = ''; leads = []; filtered = []; curLead = null; selOC = ''; activeFilter = 'all';
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('splash').classList.remove('hide');
+  document.getElementById('splashSearch').value = '';
+  const lv = document.getElementById('leadView');
+  const es = document.getElementById('emptyState');
+  if (lv) lv.style.display = 'none';
+  if (es) es.style.display = 'flex';
+  document.querySelectorAll('.fc').forEach((c, i) => c.classList.toggle('active', i === 0));
+  initSplash();
+}
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.add('hide'); });
+});
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+initSplash();
+</script>
+</body>
+
+</html>
