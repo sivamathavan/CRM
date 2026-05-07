@@ -111,11 +111,13 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 .stat-sub{font-size:11px;margin-top:2px;font-weight:500}
 .card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px;margin-bottom:14px}
 .card-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.card-title .ct-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:100px;background:var(--b1);color:var(--mu)}
 
 /* TABLES */
-.data-table{width:100%;border-collapse:collapse;font-size:12px}
-.data-table th{text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu2);font-weight:600;border-bottom:1px solid var(--b1)}
+.tbl-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tbl-wrap::-webkit-scrollbar{height:3px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
+.data-table th{text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu2);font-weight:600;border-bottom:1px solid var(--b1);white-space:nowrap}
 .data-table td{padding:9px 10px;border-bottom:1px solid var(--b1);color:var(--tx);vertical-align:middle}
 .data-table tr:last-child td{border-bottom:none}
 .data-table tr:hover td{background:rgba(255,255,255,.02)}
@@ -123,6 +125,8 @@ body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh
 /* FORM ELEMENTS */
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .form-row.single{grid-template-columns:1fr}
+.card-title .ct-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:100px;background:var(--b1);color:var(--mu)}
+
 .fg{display:flex;flex-direction:column;gap:5px}
 .fg label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu2);font-weight:600}
 .fg input,.fg select,.fg textarea{background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 11px;font-family:var(--fb);font-size:12px;color:var(--tx);outline:none;transition:border .15s}
@@ -330,9 +334,11 @@ select option{background:var(--s2);color:var(--tx)}
   .page-sub{font-size:11px;margin-bottom:12px}
   .card{padding:12px;margin-bottom:10px}
   .card-title{font-size:12px}
-  .data-table{font-size:11px}
-  .data-table th{padding:5px 6px;font-size:9px}
+  .tbl-wrap{overflow-x:auto;margin:0 -4px}
+  .data-table{font-size:11px;min-width:380px}
+  .data-table th{padding:5px 6px;font-size:9px;white-space:nowrap}
   .data-table td{padding:6px 6px}
+  
   .form-grid,.form-row{grid-template-columns:1fr}
   .fg input,.fg select,.fg textarea{padding:9px 10px;font-size:13px}
   .fg2 input,.fg2 select,.fg2 textarea{padding:9px 10px;font-size:13px}
@@ -517,10 +523,10 @@ select option{background:var(--s2);color:var(--tx)}
           <div class="page-sub">Manage your telecalling team and passkeys</div>
           <div class="card">
             <div class="card-title">Team Members <button class="btn primary sm" onclick="openAddWorkerModal()" style="margin-left:auto">➕ Add Worker</button></div>
-            <table class="data-table">
+            <div class="tbl-wrap"><table class="data-table">
               <thead><tr><th>Name</th><th>Role</th><th>Calls Made</th><th>Hot Leads</th><th>Status</th><th>Passkey</th><th>Actions</th></tr></thead>
               <tbody id="workersTbody"></tbody>
-            </table>
+            </table></div>
           </div>
         </div>
 
@@ -552,10 +558,10 @@ select option{background:var(--s2);color:var(--tx)}
           </div>
           <div class="card">
             <div class="card-title">All Sheets <span class="ct-badge" id="sheetCount">0</span></div>
-            <table class="data-table">
+            <div class="tbl-wrap"><table class="data-table">
               <thead><tr><th>Sheet Name</th><th>Assigned To</th><th>Total Leads</th><th>Uploaded</th><th>Actions</th></tr></thead>
               <tbody id="sheetsTbody"></tbody>
-            </table>
+            </table></div>
           </div>
         </div>
 
@@ -574,10 +580,10 @@ select option{background:var(--s2);color:var(--tx)}
                 <option>Interested</option><option>Call Back</option><option>Not Interested</option><option>No Answer</option><option>Busy</option><option>New</option>
               </select>
             </div>
-            <table class="data-table">
+            <div class="tbl-wrap"><table class="data-table">
               <thead><tr><th>Business</th><th>Contact</th><th>City</th><th>Service</th><th>Worker</th><th>Status</th><th>Interest</th></tr></thead>
               <tbody id="allLeadsTbody"></tbody>
-            </table>
+            </table></div>
           </div>
         </div>
 
