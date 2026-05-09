@@ -976,6 +976,8 @@ async function attemptLogin(worker) {
 // ══════════════════════════════════════════════════
 async function loginAs(name, role) {
   curUser = name; curRole = role;
+  // Persist session so page refresh keeps user logged in
+  localStorage.setItem('crm_session', JSON.stringify({ name, role, ts: Date.now() }));
   const chip = document.getElementById('tbChip');
   chip.textContent = (role === 'admin' ? '👑 ' : '👤 ') + name;
   chip.className = 'tb-chip ' + (role === 'admin' ? 'chip-admin' : 'chip-worker');
@@ -991,6 +993,28 @@ async function loginAs(name, role) {
     await loadWorkerLeads(name);
     showCRMView();
   }
+}
+
+// ══════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════
+function showAdminView() {
+  document.getElementById('adminPanel').style.display = 'flex';
+  document.getElementById('crmPanel').style.display   = 'none';
+}
+
+function showCRMView() {
+  document.getElementById('adminPanel').style.display = 'none';
+  document.getElementById('crmPanel').style.display   = 'flex';
+  document.getElementById('sortSel').style.display    = '';
+  applyFilters();
+}
+
+function toggleAdminPanel() {
+  const ap = document.getElementById('adminPanel');
+  const cp = document.getElementById('crmPanel');
+  if (ap.style.display === 'none') { ap.style.display = 'flex'; cp.style.display = 'none'; }
+  else                             { ap.style.display = 'none';  cp.style.display = 'flex'; }
 }
 
 // ══════════════════════════════════════════════════
@@ -1392,6 +1416,7 @@ function escAttr(str) {
 function resetApp() {
   if (!confirm('Exit to login screen?')) return;
   curUser = ''; curRole = ''; leads = []; filtered = []; curLead = null; selOC = ''; activeFilter = 'all';
+  localStorage.removeItem('crm_session');
   document.getElementById('app').classList.remove('show');
   document.getElementById('splash').classList.remove('hide');
   document.getElementById('splashSearch').value = '';
@@ -1460,7 +1485,26 @@ async function runSeeder(){
 // ══════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════
-initSplash();
+// ── Auto-restore session on page refresh ──
+(async function restoreSession() {
+  try {
+    const saved = localStorage.getItem('crm_session');
+    if (saved) {
+      const { name, role, ts } = JSON.parse(saved);
+      // Session valid for 12 hours
+      if (name && role && (Date.now() - ts) < 12 * 60 * 60 * 1000) {
+        // Verify worker still exists in DB
+        const workers = await sGet('workers', `select=name,role,passkey&name=eq.${encodeURIComponent(name)}`);
+        if (Array.isArray(workers) && workers.length && workers[0].role === role) {
+          await loginAs(name, role);
+          return;
+        }
+      }
+    }
+  } catch(e) { /* silent — fall through to normal splash */ }
+  localStorage.removeItem('crm_session');
+  initSplash();
+})();
 </script>
 </body>
 </html>
