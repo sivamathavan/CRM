@@ -4201,6 +4201,27 @@ async function confirmShareSheet() {
   await loadAdminData();
   toast(`✅ ${srcLeads.length} leads shared to ${toWorker}!`);
 }
+
+// ══════════════════════════════════════════════════
+// STARTUP — restore session or show login
+// ══════════════════════════════════════════════════
+(async function() {
+  try {
+    const saved = localStorage.getItem('crm_session');
+    if (saved) {
+      const { name, role, ts } = JSON.parse(saved);
+      if (name && role && (Date.now() - ts) < 43200000) {
+        const ws = await sGet('workers', `select=name,role&name=eq.${encodeURIComponent(name)}`);
+        if (Array.isArray(ws) && ws.length && ws[0].role === role) {
+          await loginAs(name, role);
+          return;
+        }
+      }
+    }
+  } catch(e) { console.warn('Session restore failed:', e); }
+  localStorage.removeItem('crm_session');
+  initSplash();
+})();
 </script>
 </body>
 </html>
