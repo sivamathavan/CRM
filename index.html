@@ -1126,9 +1126,16 @@ async function loadAdminData() {
 }
 
 function updateTopStats() {
-  const total  = leads.length;
-  const called = leads.filter(l => l.called).length;
-  const hot    = leads.filter(l => l.overall_status === 'Interested').length;
+  // Deduplicate by phone for totals — shared/re-uploaded leads with same number count once
+  const seenPhones = new Set();
+  const uniqueLeads = leads.filter(l => {
+    if (!l.phone || l.phone.length < 6) return true;
+    if (seenPhones.has(l.phone)) return false;
+    seenPhones.add(l.phone); return true;
+  });
+  const total  = uniqueLeads.length;
+  const called = uniqueLeads.filter(l => l.called).length;
+  const hot    = uniqueLeads.filter(l => l.overall_status === 'Interested').length;
   document.getElementById('statTotal').textContent  = total;
   document.getElementById('statCalled').textContent = called;
   document.getElementById('statHot').textContent    = hot;
@@ -1448,52 +1455,82 @@ async function uploadSheetFile(file) {
       const matchedIndustry = Object.keys(INDUSTRY_SCRIPTS).find(k =>
         sname.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(sname.toLowerCase())
       ) || '';
-      pm.textContent = `Found ${rows.length} leads. Creating sheet…`;
-      const sheetRec = await sPost('sheets', [{ name: sname, uploaded_by: curUser, assigned_to: worker, total_leads: rows.length }]);
-      const sheetId  = Array.isArray(sheetRec) && sheetRec[0] ? sheetRec[0].id : null;
-      const batch = 50;
-      for (let i = 0; i < rows.length; i += batch) {
-        const chunk = rows.slice(i, i + batch).map((r, j) => {
-          const bizName = r['Business Name'] || r['Clinic / Hospital Name'] || r['Clinic Name'] ||
-                          r['Shop / Boutique Name'] || r['Restaurant / Cafe Name'] ||
-                          r['Institute / Brand Name'] || r['Company Name'] || r['Store Name'] ||
-                          r['Agency Name'] || r['Firm Name'] || r['Property Name'] ||
-                          r['Gym Name'] || r['Salon Name'] || r['Outlet Name'] ||
-                          r['Farm / Business Name'] || r['Name'] || '—';
-          const contact = r['Contact Person'] || r['Doctor Name'] || r['Owner Name'] ||
-                          r['Manager Name'] || r['Contact'] || '—';
-          const phone = r['Phone'] || r['Mobile'] || r['Mobile Number'] || r['Phone Number'] || '';
-          const city  = r['City'] || r['Location'] || r['Area'] || '—';
-          const mapUrl = r['Map URL'] || r['Map Link'] || r['Google Map'] || '';
-          const specType = r['Type'] || r['Specialty'] || r['Cuisine Type'] || r['Brand'] || '';
-          const rowIndustry = r['Industry'] || '';
-          let finalIndustry = rowIndustry || (matchedIndustry && specType ? matchedIndustry + ' — ' + specType : matchedIndustry) || '—';
-          const notes = mapUrl ? 'Map: ' + mapUrl : (r['Notes'] || null);
-          return {
-            no: parseInt(r['No'] || r['S.No']) || (i + j + 1),
-            business:       String(bizName).trim(),
-            industry:       String(finalIndustry).trim(),
-            city:           String(city).trim(),
-            contact:        String(contact).trim(),
-            phone:          String(phone).trim(),
-            email:          String(r['Email'] || r['Email ID'] || '').trim(),
-            service:        String(r['Service Needed'] || r['Service'] || 'Web Dev').trim(),
-            interest:       parseInt(r['Interest %'] || r['Interest']) || 0,
-            priority:       String(r['Priority'] || 'Medium').trim(),
-            overall_status: 'New', stage: 'Lead',
-            wa_sent: false, email_sent: false, called: false,
-            notes: notes || null,
-            sheet_id: sheetId, assigned_to: worker,
-          };
-        });
-        await sPost('leads', chunk);
-        const pct = Math.min(Math.round(((i + batch) / rows.length) * 100), 100);
-        pf.style.width = pct + '%';
-        pm.textContent = `Uploading… ${Math.min(i + batch, rows.length)} / ${rows.length}`;
+
+      // ── Map all rows first ──────────────────────────────
+      pm.textContent = `Found ${rows.length} rows. Checking for duplicates…`;
+      const mappedRows = rows.map((r, j) => {
+        const bizName = r['Business Name'] || r['Clinic / Hospital Name'] || r['Clinic Name'] ||
+                        r['Shop / Boutique Name'] || r['Restaurant / Cafe Name'] ||
+                        r['Institute / Brand Name'] || r['Company Name'] || r['Store Name'] ||
+                        r['Agency Name'] || r['Firm Name'] || r['Property Name'] ||
+                        r['Gym Name'] || r['Salon Name'] || r['Outlet Name'] ||
+                        r['Farm / Business Name'] || r['Name'] || '—';
+        const contact = r['Contact Person'] || r['Doctor Name'] || r['Owner Name'] ||
+                        r['Manager Name'] || r['Contact'] || '—';
+        const phone = String(r['Phone'] || r['Mobile'] || r['Mobile Number'] || r['Phone Number'] || '').trim();
+        const city  = r['City'] || r['Location'] || r['Area'] || '—';
+        const mapUrl = r['Map URL'] || r['Map Link'] || r['Google Map'] || '';
+        const specType = r['Type'] || r['Specialty'] || r['Cuisine Type'] || r['Brand'] || '';
+        const rowIndustry = r['Industry'] || '';
+        const finalIndustry = rowIndustry || (matchedIndustry && specType ? matchedIndustry + ' — ' + specType : matchedIndustry) || '—';
+        const notes = mapUrl ? 'Map: ' + mapUrl : (r['Notes'] || null);
+        return {
+          no: parseInt(r['No'] || r['S.No']) || (j + 1),
+          business:       String(bizName).trim(),
+          industry:       String(finalIndustry).trim(),
+          city:           String(city).trim(),
+          contact:        String(contact).trim(),
+          phone,
+          email:          String(r['Email'] || r['Email ID'] || '').trim(),
+          service:        String(r['Service Needed'] || r['Service'] || 'Web Dev').trim(),
+          interest:       parseInt(r['Interest %'] || r['Interest']) || 0,
+          priority:       String(r['Priority'] || 'Medium').trim(),
+          overall_status: 'New', stage: 'Lead',
+          wa_sent: false, email_sent: false, called: false,
+          notes: notes || null,
+          assigned_to: worker,
+        };
+      });
+
+      // ── Deduplicate by phone number ─────────────────────
+      const existingRes = await sGet('leads', 'select=phone&limit=10000');
+      const existingPhones = new Set(
+        (Array.isArray(existingRes) ? existingRes : [])
+          .map(l => l.phone).filter(p => p && p.length > 5)
+      );
+      // Also deduplicate within the sheet itself
+      const seenInSheet = new Set();
+      const uniqueRows = mappedRows.filter(r => {
+        if (!r.phone || r.phone.length < 6) return true; // no phone → always include
+        if (existingPhones.has(r.phone)) return false;   // already in DB → skip
+        if (seenInSheet.has(r.phone)) return false;      // duplicate in this file → skip
+        seenInSheet.add(r.phone);
+        return true;
+      });
+      const dupCount = mappedRows.length - uniqueRows.length;
+      if (!uniqueRows.length) {
+        pm.textContent = `⚠️ All ${mappedRows.length} leads already exist in DB (duplicate phone numbers). Nothing uploaded.`;
+        setTimeout(() => pw.classList.remove('show'), 3000);
+        return;
       }
-      pm.textContent = `✅ ${rows.length} leads saved for ${worker}!`;
-      await logActivity('sheet_upload', 'sheet', null, null, `Uploaded "${sname}" (${rows.length} leads) → ${worker}`);
-      setTimeout(() => { pw.classList.remove('show'); loadAdminData(); }, 1500);
+      pm.textContent = `${uniqueRows.length} new leads (${dupCount} duplicates skipped). Creating sheet…`;
+
+      const sheetRec = await sPost('sheets', [{ name: sname, uploaded_by: curUser, assigned_to: worker, total_leads: uniqueRows.length }]);
+      const sheetId  = Array.isArray(sheetRec) && sheetRec[0] ? sheetRec[0].id : null;
+      uniqueRows.forEach((r, i) => { r.no = i + 1; r.sheet_id = sheetId; });
+
+      const batch = 50;
+      for (let i = 0; i < uniqueRows.length; i += batch) {
+        await sPost('leads', uniqueRows.slice(i, i + batch));
+        const pct = Math.min(Math.round(((i + batch) / uniqueRows.length) * 100), 100);
+        pf.style.width = pct + '%';
+        pm.textContent = `Uploading… ${Math.min(i + batch, uniqueRows.length)} / ${uniqueRows.length}` +
+                         (dupCount ? ` (${dupCount} duplicates skipped)` : '');
+      }
+      pm.textContent = `✅ ${uniqueRows.length} leads saved for ${worker}!` +
+                       (dupCount ? ` (${dupCount} duplicate phone numbers skipped)` : '');
+      await logActivity('sheet_upload', 'sheet', null, null, `Uploaded "${sname}" (${uniqueRows.length} leads, ${dupCount} dups skipped) → ${worker}`);
+      setTimeout(() => { pw.classList.remove('show'); loadAdminData(); }, 2000);
     } catch (err) {
       pm.textContent = '❌ Error: ' + err.message;
       console.error(err);
@@ -4125,6 +4162,14 @@ async function saveAddLead() {
   if (!business) { toast('⚠️ Business name is required!'); return; }
   if (!phone)    { toast('⚠️ Mobile number is required!'); return; }
   if (!worker)   { toast('⚠️ Please assign to a worker!'); return; }
+  // Check for duplicate phone
+  if (phone.length >= 6) {
+    const dup = await sGet('leads', `select=id,business&phone=eq.${encodeURIComponent(phone)}&limit=1`);
+    if (Array.isArray(dup) && dup.length) {
+      toast(`⚠️ Lead with mobile ${phone} already exists ("${dup[0].business}")! Duplicate not added.`);
+      return;
+    }
+  }
   const industry  = document.getElementById('alIndustry').value;
   const specType  = document.getElementById('alType').value.trim();
   const finalInd  = industry && specType ? industry + ' — ' + specType : industry || '—';
