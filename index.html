@@ -557,6 +557,11 @@ select option{background:var(--s2);color:var(--tx)}
             </div>
           </div>
           <div class="card">
+            <div class="card-title">📥 Download Sample Sheets</div>
+            <div style="font-size:12px;color:var(--mu);margin-bottom:12px">Download a pre-formatted sample sheet for any industry. Fill it and upload above.</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px" id="sampleSheetBtns"></div>
+          </div>
+          <div class="card">
             <div class="card-title">All Sheets <span class="ct-badge" id="sheetCount">0</span></div>
             <div class="tbl-wrap"><table class="data-table">
               <thead><tr><th>Sheet Name</th><th>Assigned To</th><th>Total Leads</th><th>Uploaded</th><th>Actions</th></tr></thead>
@@ -1008,6 +1013,7 @@ async function loadAdminData() {
   renderDashboard(al || []);
   renderWorkersTable();
   renderSheetsTable();
+  renderSampleSheetBtns();
   renderAllLeads();
   populateWorkerSelects();
   toast('✅ Admin data loaded!');
@@ -1263,9 +1269,18 @@ async function saveEditSheet() {
   if (worker) {
     await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`, { method: 'PATCH', headers: SH, body: JSON.stringify({ assigned_to: worker }) });
   }
+  // Sync industry on all leads to match the new sheet name
+  const matchedKey = Object.keys(INDUSTRY_SCRIPTS).find(k =>
+    name.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(name.toLowerCase())
+  );
+  if (matchedKey) {
+    await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`, { method: 'PATCH', headers: SH, body: JSON.stringify({ industry: matchedKey }) });
+    toast(`✅ Sheet updated! Scripts synced to "${matchedKey}".`);
+  } else {
+    toast('✅ Sheet updated!');
+  }
   closeModal('editSheetModal');
   await loadAdminData();
-  toast('✅ Sheet updated!');
 }
 
 async function deleteSheet() {
@@ -1284,6 +1299,93 @@ async function confirmDeleteSheet(id) {
   await sDel('sheets', id);
   await loadAdminData();
   toast('🗑️ Sheet deleted.');
+}
+
+// ══════════════════════════════════════════════════
+// SAMPLE SHEET GENERATOR
+// ══════════════════════════════════════════════════
+const INDUSTRY_COLUMNS = {
+  "Clinics & Hospitals":            ["No","Clinic / Hospital Name","Doctor Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Textile & Boutiques":            ["No","Shop / Boutique Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Coaching & Personal Brands":     ["No","Institute / Brand Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Salons & Beauty Clinics":        ["No","Salon Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Real Estate":                    ["No","Agency / Builder Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Wedding Industry":               ["No","Business Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Construction & Interior":        ["No","Company Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Restaurants & Cafes":            ["No","Restaurant / Cafe Name","Owner Name","Cuisine Type","Mobile Number","Email","Location","Map URL"],
+  "Educational Institutions":       ["No","Institute Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Jewelry":                        ["No","Jewelry Shop Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Gyms & Fitness Centers":         ["No","Gym Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Finance & Financial Services":   ["No","Firm Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Resorts & Hotels":               ["No","Property Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Automobile Accessories & Detailing":["No","Business Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Furniture Stores":               ["No","Store Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Legal & Professional Services":  ["No","Firm Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Electronics & Mobile Shops":     ["No","Store Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Supermarkets & Grocery Chains":  ["No","Store Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Travel & Tourism":               ["No","Agency Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Logistics & Transport":          ["No","Company Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Manufacturing Exporters":        ["No","Company Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Franchise Businesses":           ["No","Outlet Name","Contact Person","Brand","Mobile Number","Email","Location","Map URL"],
+  "Event Management":               ["No","Company Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+  "Agriculture & Agri-Tech":        ["No","Farm / Business Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Builders Material & Hardware":   ["No","Store Name","Owner Name","Type","Mobile Number","Email","Location","Map URL"],
+  "Religious & Spiritual Tourism":  ["No","Business Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"],
+};
+
+function renderSampleSheetBtns() {
+  const container = document.getElementById('sampleSheetBtns');
+  if (!container) return;
+  container.innerHTML = Object.keys(INDUSTRY_COLUMNS).map(ind =>
+    `<button class="btn" style="font-size:10px;padding:4px 10px" onclick="downloadSampleSheet(${JSON.stringify(ind)})">${ind}</button>`
+  ).join('');
+}
+
+function downloadSampleSheet(industry) {
+  const cols = INDUSTRY_COLUMNS[industry] || ["No","Business Name","Contact Person","Type","Mobile Number","Email","Location","Map URL"];
+  const wb = XLSX.utils.book_new();
+  // Header row + hint row + 3 sample rows
+  const hintMap = {
+    "No": "1, 2, 3…",
+    "Clinic / Hospital Name": "Full clinic or hospital name",
+    "Shop / Boutique Name": "Full shop or boutique name",
+    "Restaurant / Cafe Name": "Full restaurant name",
+    "Institute / Brand Name": "Full institute or brand name",
+    "Jewelry Shop Name": "Full jewelry shop name",
+    "Gym Name": "Full gym or fitness center name",
+    "Store Name": "Full store name",
+    "Agency Name": "Full agency name",
+    "Company Name": "Full company name",
+    "Farm / Business Name": "Full farm or business name",
+    "Outlet Name": "Full outlet name",
+    "Property Name": "Full hotel or resort name",
+    "Business Name": "Full business name",
+    "Firm Name": "Full firm name",
+    "Agency / Builder Name": "Full agency or builder name",
+    "Doctor Name": "Dr. FirstName LastName",
+    "Owner Name": "FirstName LastName",
+    "Contact Person": "FirstName LastName",
+    "Type": "Sub-type or specialty (e.g. Dental, General, Veg, Non-Veg…)",
+    "Cuisine Type": "Veg / Non-Veg / Multi-Cuisine / Chinese / South Indian…",
+    "Brand": "Brand name (e.g. Subway, Domino's…)",
+    "Mobile Number": "+91XXXXXXXXXX",
+    "Email": "email@example.com",
+    "Location": "Area, City (e.g. RS Puram, Coimbatore)",
+    "Map URL": "https://maps.google.com/… (optional)",
+  };
+  const rows = [
+    cols,
+    cols.map(c => hintMap[c] || ''),
+    cols.map((c, i) => i === 0 ? 1 : c === 'Mobile Number' ? '+91 98765 43210' : c === 'Email' ? 'sample@example.com' : c === 'Map URL' ? '' : 'Sample ' + c),
+    cols.map((c, i) => i === 0 ? 2 : c === 'Mobile Number' ? '+91 87654 32109' : c === 'Email' ? '' : c === 'Map URL' ? '' : 'Sample ' + c),
+    cols.map((c, i) => i === 0 ? 3 : c === 'Mobile Number' ? '+91 76543 21098' : c === 'Email' ? '' : c === 'Map URL' ? 'https://maps.google.com/' : 'Sample ' + c),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Column widths
+  ws['!cols'] = cols.map(c => ({ wch: c === 'Map URL' ? 45 : c.length > 18 ? 32 : c.length > 10 ? 24 : 12 }));
+  XLSX.utils.book_append_sheet(wb, ws, industry.substring(0, 31));
+  XLSX.writeFile(wb, industry.replace(/[/&]/g, '-') + ' — Sample Sheet.xlsx');
+  toast('📥 Sample sheet downloaded!');
 }
 
 // ══════════════════════════════════════════════════
@@ -1316,29 +1418,63 @@ async function uploadSheetFile(file) {
       const wb   = XLSX.read(e.target.result, { type: 'array' });
       const sn   = wb.SheetNames.find(n => /follow.?up|tracker/i.test(n)) || wb.SheetNames[0];
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '' })
-                       .filter(r => r['Business Name'] || r['Contact Person']);
+                       .filter(r => r['Business Name'] || r['Contact Person'] ||
+                                    r['Clinic / Hospital Name'] || r['Clinic Name'] ||
+                                    r['Shop Name'] || r['Restaurant Name'] || r['Company Name'] ||
+                                    r['Institute Name'] || r['Agency Name'] || r['Store Name'] ||
+                                    r['Hotel Name'] || r['Salon Name'] || r['Gym Name'] ||
+                                    r['Farm Name'] || r['Outlet Name'] || r['Firm Name'] ||
+                                    r['Property Name'] || r['Business'] || r['Name']);
       if (!rows.length) { pm.textContent = '❌ No valid rows found. Check column names.'; return; }
+      // Detect industry from sheet name
+      const snameIndustry = getIndustryScript(sname) ? sname : '';
+      const matchedIndustry = snameIndustry || Object.keys(INDUSTRY_SCRIPTS).find(k =>
+        sname.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(sname.toLowerCase())
+      ) || '';
       pm.textContent = `Found ${rows.length} leads. Creating sheet…`;
       const sheetRec = await sPost('sheets', [{ name: sname, uploaded_by: curUser, assigned_to: worker, total_leads: rows.length }]);
       const sheetId  = Array.isArray(sheetRec) && sheetRec[0] ? sheetRec[0].id : null;
       const batch = 50;
       for (let i = 0; i < rows.length; i += batch) {
-        const chunk = rows.slice(i, i + batch).map((r, j) => ({
-          no: parseInt(r['No']) || (i + j + 1),
-          business:       String(r['Business Name']   || '—'),
-          industry:       String(r['Industry']         || '—'),
-          city:           String(r['City']             || '—'),
-          contact:        String(r['Contact Person']   || '—'),
-          phone:          String(r['Phone']            || ''),
-          email:          String(r['Email']            || ''),
-          service:        String(r['Service Needed']   || '—'),
-          interest:       parseInt(r['Interest %'])    || 0,
-          priority:       String(r['Priority']         || 'Medium'),
-          overall_status: 'New',
-          stage:          'Lead',
-          wa_sent: false, email_sent: false, called: false,
-          sheet_id: sheetId, assigned_to: worker,
-        }));
+        const chunk = rows.slice(i, i + batch).map((r, j) => {
+          // Flexible column name resolution
+          const bizName = r['Business Name'] || r['Clinic / Hospital Name'] || r['Clinic Name'] ||
+                          r['Hospital Name'] || r['Shop Name'] || r['Restaurant Name'] ||
+                          r['Company Name'] || r['Institute Name'] || r['Agency Name'] ||
+                          r['Store Name'] || r['Hotel Name'] || r['Salon Name'] || r['Gym Name'] ||
+                          r['Farm Name'] || r['Outlet Name'] || r['Firm Name'] ||
+                          r['Property Name'] || r['Business'] || r['Name'] || '—';
+          const contactName = r['Contact Person'] || r['Doctor Name'] || r['Owner Name'] ||
+                              r['Manager Name'] || r['Contact'] || r['Person'] || '—';
+          const phone = r['Phone'] || r['Mobile'] || r['Mobile Number'] || r['Phone Number'] ||
+                        r['Contact Number'] || r['Mob'] || '';
+          const city  = r['City'] || r['Location'] || r['Area'] || r['Address'] || '—';
+          const mapUrl = r['Map URL'] || r['Map Link'] || r['Google Map'] || r['Maps'] || '';
+          const specType = r['Type'] || r['Specialty'] || r['Category'] || r['Sub-Type'] || '';
+          const rowIndustry = r['Industry'] || r['Industry Type'] || '';
+          // Industry: row value > sheet-matched industry > type-augmented
+          let finalIndustry = rowIndustry || matchedIndustry || '—';
+          if (matchedIndustry && specType) finalIndustry = matchedIndustry + (specType ? ' — ' + specType : '');
+          else if (matchedIndustry) finalIndustry = matchedIndustry;
+          const notes = mapUrl ? 'Map: ' + mapUrl : (r['Notes'] || r['Note'] || null);
+          return {
+            no: parseInt(r['No'] || r['S.No'] || r['Sr']) || (i + j + 1),
+            business:       String(bizName).trim(),
+            industry:       String(finalIndustry).trim(),
+            city:           String(city).trim(),
+            contact:        String(contactName).trim(),
+            phone:          String(phone).trim(),
+            email:          String(r['Email'] || r['Email ID'] || r['Mail'] || '').trim(),
+            service:        String(r['Service Needed'] || r['Service'] || 'Web Dev').trim(),
+            interest:       parseInt(r['Interest %'] || r['Interest']) || 0,
+            priority:       String(r['Priority'] || 'Medium').trim(),
+            overall_status: 'New',
+            stage:          'Lead',
+            wa_sent: false, email_sent: false, called: false,
+            notes:          notes || null,
+            sheet_id: sheetId, assigned_to: worker,
+          };
+        });
         await sPost('leads', chunk);
         const pct = Math.min(Math.round(((i + batch) / rows.length) * 100), 100);
         pf.style.width = pct + '%';
