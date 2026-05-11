@@ -1,4 +1,4 @@
 {
-  "outputDirectory": ".",
-  "buildCommand": null
+  "buildCommand": "",
+  "outputDirectory": "."
 }
