@@ -865,7 +865,7 @@ async function loadAdminData(){
   const [ws,ss,ls,al]=await Promise.all([
     sGet('workers','select=*&order=id'),
     sGet('sheets','select=*&order=created_at.desc'),
-    sGet('leads','select=*&limit=2000&order=no'),
+    sGet('leads','select=*&limit=2000&order=id.desc'),
     sGet('activity_log','select=*&order=created_at.desc&limit=100'),
   ]);
   workers=Array.isArray(ws)?ws:[];
@@ -1504,7 +1504,7 @@ async function saveSheetEdit(){
 }
 
 async function loadWorkerLeads(name){
-  let data=await sGet('leads',`select=*&assigned_to=eq.${encodeURIComponent(name)}&limit=2000&order=no`);
+  let data=await sGet('leads',`select=*&assigned_to=eq.${encodeURIComponent(name)}&limit=2000&order=id.desc`);
   // FIX: removed fallback that silently loaded ALL leads — show proper empty state instead
   leads=Array.isArray(data)?data:[];
   filtered=leads;
