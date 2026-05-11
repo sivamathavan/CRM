@@ -325,7 +325,6 @@ select option{background:var(--s2);color:var(--tx)}
 
   <div class="sp-card">
     <h2>Who are you?</h2>
-    <p>Admin manages workers, uploads sheets & monitors all activity. Workers see only their assigned leads.</p>
 
     <!-- Admin box -->
     <div class="admin-login-box" onclick="selectAdmin()">
@@ -511,7 +510,10 @@ select option{background:var(--s2);color:var(--tx)}
         </div>
 
         <div class="card">
-          <div class="card-title">Uploaded Sheets</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="card-title" style="margin:0">Uploaded Sheets</div>
+            <button class="btn danger sm" onclick="deleteAllSheets()" style="font-size:10px">🗑️ Delete All</button>
+          </div>
           <table class="dt"><thead><tr><th>Sheet Name</th><th>Assigned To</th><th>Leads</th><th>Uploaded</th><th>Actions</th></tr></thead>
           <tbody id="sheetsTbody"></tbody></table>
         </div>
@@ -809,6 +811,7 @@ function selectWorker(name,passkey){
   document.getElementById('passkeyLabel').textContent=`Enter passkey for ${name}:`;
   document.getElementById('passkeyInput').value='';
   pb.classList.add('show');
+  pb.style.display='block';
   setTimeout(()=>document.getElementById('passkeyInput').focus(),100);
 }
 
@@ -827,7 +830,7 @@ function submitPasskey(){
 
 async function loginAdmin(){
   curUser='Mathavan';curRole='admin';
-  document.getElementById('tbChip').textContent='👑 Mathavan';
+  document.getElementById('tbChip').textContent='Mathavan';
   document.getElementById('tbChip').className='tb-chip chip-admin';
   document.getElementById('adminBtn').style.display='';
   document.getElementById('crmBtn').style.display='none';
@@ -1366,13 +1369,34 @@ async function uploadSheet(file){
 }
 
 async function deleteSheet(id,name){
-  // FIX: show actual lead count in confirm dialog
   const count=allLeads.filter(l=>l.sheet_id===id).length;
   if(!confirm(`Delete sheet "${name}"?\nThis will permanently remove ${count} lead${count!==1?'s':''} from the database. This cannot be undone.`))return;
-  await sDelQ('leads',`sheet_id=eq.${id}`);
-  await sDel('sheets',id);
-  await loadAdminData();
-  toast(`🗑️ Sheet "${name}" and ${count} leads deleted.`,'warn');
+  try{
+    await sDelQ('leads',`sheet_id=eq.${id}`);
+    await sDel('sheets',id);
+    await loadAdminData();
+    renderSheetsTable();
+    toast(`🗑️ Sheet "${name}" and ${count} leads deleted.`,'warn');
+  } catch(e){
+    toast('Error deleting sheet: '+e.message,'err');
+  }
+}
+
+async function deleteAllSheets(){
+  if(!sheets.length){toast('No sheets to delete','warn');return;}
+  const totalLeads=allLeads.length;
+  if(!confirm(`Delete ALL ${sheets.length} sheets?\nThis will permanently remove ${totalLeads} leads from the database. This CANNOT be undone.`))return;
+  try{
+    for(const s of sheets){
+      await sDelQ('leads',`sheet_id=eq.${s.id}`);
+      await sDel('sheets',s.id);
+    }
+    await loadAdminData();
+    renderSheetsTable();
+    toast(`🗑️ All ${sheets.length} sheets and ${totalLeads} leads deleted.`,'warn');
+  } catch(e){
+    toast('Error deleting sheets: '+e.message,'err');
+  }
 }
 
 async function addSingleLead(){
