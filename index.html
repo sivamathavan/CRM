@@ -419,6 +419,7 @@ select option{background:var(--s2);color:var(--tx)}
               <option value="wa_sent">WhatsApp Sent</option>
               <option value="email_sent">Email Sent</option>
             </select>
+            <input type="date" id="actDate" onchange="loadActivity()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
           </div>
           <div id="actList"></div>
         </div>
@@ -782,7 +783,7 @@ async function initSplash(){
   const nonAdmin=workers.filter(w=>w.role!=='admin');
   if(!nonAdmin.length){list.innerHTML='<div style="font-size:12px;color:var(--mu2);padding:8px 0">No workers yet — login as Admin to add workers</div>';return;}
   list.innerHTML=nonAdmin.map(w=>`
-    <div class="worker-item" onclick="selectWorker(${JSON.stringify(w.name)},${JSON.stringify(w.passkey||'')})">
+    <div class="worker-item" onclick="selectWorker(this.dataset.name, this.dataset.pass)" data-name="${(w.name||'').replace(/"/g, '&quot;')}" data-pass="${(w.passkey||'').replace(/"/g, '&quot;')}">
       <span style="font-size:16px">👤</span>
       <span class="worker-item-name">${w.name}</span>
       <span class="badge-worker">WORKER</span>
@@ -807,11 +808,9 @@ function selectAdmin(){
 
 function selectWorker(name,passkey){
   pendingWorker={name,passkey,isAdmin:false};
-  const pb=document.getElementById('passkeyBox');
   document.getElementById('passkeyLabel').textContent=`Enter passkey for ${name}:`;
   document.getElementById('passkeyInput').value='';
-  pb.classList.add('show');
-  pb.style.display='block';
+  document.getElementById('passkeyBox').classList.add('show');
   setTimeout(()=>document.getElementById('passkeyInput').focus(),100);
 }
 
@@ -992,10 +991,26 @@ function renderSheetsTable(){
       <td style="color:var(--mu)">${dt}</td>
       <td style="display:flex;gap:5px">
         <button class="btn sm" onclick="openSheetEdit(${s.id})">✏️ Edit</button>
-        <button class="btn danger sm" onclick="deleteSheet(${s.id},${JSON.stringify(s.name)})">🗑️</button>
+        <button class="btn danger sm" onclick="deleteSheet(${s.id}, this.dataset.name)" data-name="${(s.name||'').replace(/"/g, '&quot;')}">🗑️</button>
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--mu2);padding:20px">No sheets uploaded yet</td></tr>';
+}
+
+async function deleteLead(id) {
+  if(!confirm('Are you sure you want to delete this lead?')) return;
+  try {
+    await sDel('leads', id);
+    toast('Lead deleted successfully', 'success');
+    await loadAdminData();
+  } catch(e) {
+    toast('Error deleting lead', 'err');
+  }
+}
+
+function openLeadEdit(id) {
+  toast('Edit function coming soon', 'warn'); // Or implement a simple edit prompt
+  // I will implement a better edit lead function later if needed
 }
 
 function renderAllLeads(){
@@ -1064,6 +1079,9 @@ function openLeadDetail(id){
       ${l.phone?`<a href="https://wa.me/91${l.phone}" target="_blank" class="btn sm" style="background:#25d366;color:#fff">💬 WhatsApp</a>`:''}
       ${l.email?`<a href="mailto:${l.email}" class="btn sm">📧 Email</a>`:''}
       ${l.website?`<a href="${l.website}" target="_blank" class="btn sm">🌐 Website</a>`:''}
+      <div style="flex:1"></div>
+      <button class="btn sm" onclick="openLeadEdit(${l.id})">✏️ Edit</button>
+      <button class="btn danger sm" onclick="deleteLead(${l.id}); closeModal('leadDetailModal');">🗑️ Delete</button>
     </div>`;
   document.getElementById('leadDetailModal').classList.remove('hide');
 }
@@ -1090,11 +1108,20 @@ async function loadActivity(){
   if(wf)q+=`&worker_name=eq.${encodeURIComponent(wf)}`;
   if(af)q+=`&action=eq.${af}`;
   const logs=await sGet('activity_log',q);
-  document.getElementById('actList').innerHTML=(Array.isArray(logs)?logs:[]).map(a=>{
+  let currentDay = '';
+  let html = '';
+  (Array.isArray(logs)?logs:[]).forEach(a=>{
+    const tsDate = new Date(a.created_at);
+    const day = tsDate.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+    if(day !== currentDay) {
+      html += `<div style="font-size:11px;font-weight:600;color:var(--mu);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--b1)">${day}</div>`;
+      currentDay = day;
+    }
     const clr=a.action==='call_logged'?'#00b894':a.action==='wa_sent'?'#25d366':'#4a6cf7';
-    const ts=new Date(a.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    return`<div class="act-item"><div class="act-dot" style="background:${clr}"></div><div><div class="act-text"><strong>${a.worker_name}</strong> → ${a.lead_business||'—'} — ${a.detail||a.action}</div><div class="act-time">${ts}</div></div></div>`;
-  }).join('')||'<div style="font-size:12px;color:var(--mu2);padding:12px 0">No activity found</div>';
+    const ts=tsDate.toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    html += `<div class="act-item"><div class="act-dot" style="background:${clr}"></div><div><div class="act-text"><strong>${a.worker_name}</strong> → ${a.lead_business||'—'} — ${a.detail||a.action}</div><div class="act-time">${ts}</div></div></div>`;
+  });
+  document.getElementById('actList').innerHTML=html||'<div style="font-size:12px;color:var(--mu2);padding:12px 0">No activity found</div>';
 }
 
 // Fixed 26 industry categories
@@ -1179,7 +1206,7 @@ function renderIndustryChips(){
     const cnt=counts[ind.label]||0;
     if(!cnt)return'';
     const active=curInd===ind.label;
-    return`<button onclick="setIndFilter(${JSON.stringify(ind.label)})" style="font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid ${active?'var(--accent)':'var(--b2)'};background:${active?'rgba(108,92,231,.15)':'var(--bg2)'};color:${active?'var(--a2)':'var(--mu)'};cursor:pointer;font-family:var(--fb);white-space:nowrap">${ind.icon} ${ind.label} <b style="color:var(--tx)">${cnt}</b></button>`;
+    return`<button onclick="setIndFilter(this.dataset.val)" data-val="${ind.label}" style="font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid ${active?'var(--accent)':'var(--b2)'};background:${active?'rgba(108,92,231,.15)':'var(--bg2)'};color:${active?'var(--a2)':'var(--mu)'};cursor:pointer;font-family:var(--fb);white-space:nowrap">${ind.icon} ${ind.label} <b style="color:var(--tx)">${cnt}</b></button>`;
   }).join('');
   chips.innerHTML=allBtn+indBtns;
   // Also populate the dropdown with actual found industries from data
