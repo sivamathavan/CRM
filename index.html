@@ -561,7 +561,7 @@ select option{background:var(--s2);color:var(--tx)}
               <option value="">All Statuses</option><option>Interested</option><option>Call Back</option><option>Not Interested</option><option>No Answer</option><option>Busy</option><option>Won</option><option>New</option>
             </select>
           </div>
-          <table class="dt"><thead><tr><th>Business</th><th>Phone</th><th>Industry</th><th>Address</th><th>Worker</th><th>Status</th><th>Rating</th></tr></thead>
+          <table class="dt"><thead><tr><th>Business</th><th>Phone</th><th>Industry</th><th>Address</th><th>Worker</th><th>Status</th><th>Rating</th><th>Actions</th></tr></thead>
           <tbody id="alTbody"></tbody></table>
           <div id="alCount" style="font-size:11px;color:var(--mu2);margin-top:8px;text-align:right"></div>
         </div>
@@ -696,6 +696,33 @@ select option{background:var(--s2);color:var(--tx)}
     <div class="modal-acts">
       <button class="btn" onclick="closeModal('editWorkerModal')">Cancel</button>
       <button class="btn primary" onclick="updateWorkerPasskey()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit Lead -->
+<div class="modal-overlay hide" id="editLeadModal">
+  <div class="modal-box" style="max-width:620px;width:95%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="card-title" style="margin:0">✏️ Edit Lead</div>
+      <button class="btn sm" onclick="closeModal('editLeadModal')" style="padding:4px 10px;opacity:.7">✕</button>
+    </div>
+    <input type="hidden" id="editLeadId">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="afg"><label>Business Name</label><input type="text" id="editLeadBiz" placeholder="Business name"></div>
+      <div class="afg"><label>Contact Person</label><input type="text" id="editLeadContact" placeholder="Contact name"></div>
+      <div class="afg"><label>Phone</label><input type="text" id="editLeadPhone" placeholder="Phone number"></div>
+      <div class="afg"><label>Email</label><input type="text" id="editLeadEmail" placeholder="Email"></div>
+      <div class="afg"><label>Website</label><input type="text" id="editLeadWebsite" placeholder="Website URL"></div>
+      <div class="afg"><label>Address</label><input type="text" id="editLeadAddress" placeholder="Address"></div>
+      <div class="afg"><label>Industry</label><input type="text" id="editLeadIndustry" placeholder="Industry"></div>
+      <div class="afg"><label>Service</label><select id="editLeadService" style="background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 11px;font-size:12px;color:var(--tx);outline:none"><option>All Services</option><option>Web Development</option><option>App Development</option><option>Digital Marketing</option><option>AI Automation</option></select></div>
+      <div class="afg"><label>Priority</label><select id="editLeadPriority" style="background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 11px;font-size:12px;color:var(--tx);outline:none"><option>Low</option><option>Medium</option><option>High</option></select></div>
+      <div class="afg"><label>Rating</label><input type="number" id="editLeadRating" placeholder="Rating (0-5)" min="0" max="5" step="0.1"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" onclick="saveLeadEdit()" style="flex:1;justify-content:center">💾 Save</button>
+      <button class="btn" onclick="closeModal('editLeadModal')" style="flex:1;justify-content:center">Cancel</button>
     </div>
   </div>
 </div>
@@ -1009,8 +1036,59 @@ async function deleteLead(id) {
 }
 
 function openLeadEdit(id) {
-  toast('Edit function coming soon', 'warn'); // Or implement a simple edit prompt
-  // I will implement a better edit lead function later if needed
+  const lead = allLeads.find(l => l.id === id);
+  if (!lead) return;
+  
+  document.getElementById('editLeadId').value = id;
+  document.getElementById('editLeadBiz').value = lead.business || '';
+  document.getElementById('editLeadContact').value = lead.contact || '';
+  document.getElementById('editLeadPhone').value = lead.phone || '';
+  document.getElementById('editLeadEmail').value = lead.email || '';
+  document.getElementById('editLeadWebsite').value = lead.website || '';
+  document.getElementById('editLeadAddress').value = lead.address || '';
+  document.getElementById('editLeadIndustry').value = lead.industry || '';
+  document.getElementById('editLeadService').value = lead.service || 'All Services';
+  document.getElementById('editLeadPriority').value = lead.priority || 'Medium';
+  document.getElementById('editLeadRating').value = lead.rating || '';
+  
+  document.getElementById('editLeadModal').classList.remove('hide');
+}
+
+async function saveLeadEdit() {
+  const id = document.getElementById('editLeadId').value;
+  const lead = {
+    business: document.getElementById('editLeadBiz').value.trim(),
+    contact: document.getElementById('editLeadContact').value.trim(),
+    phone: document.getElementById('editLeadPhone').value.trim(),
+    email: document.getElementById('editLeadEmail').value.trim(),
+    website: document.getElementById('editLeadWebsite').value.trim(),
+    address: document.getElementById('editLeadAddress').value.trim(),
+    industry: document.getElementById('editLeadIndustry').value.trim(),
+    service: document.getElementById('editLeadService').value,
+    priority: document.getElementById('editLeadPriority').value,
+    rating: parseFloat(document.getElementById('editLeadRating').value) || null,
+  };
+  
+  if (!lead.business || !lead.contact || !lead.phone) {
+    toast('Business, contact, and phone are required!', 'warn');
+    return;
+  }
+  
+  const btn = document.querySelector('[onclick="saveLeadEdit()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  
+  try {
+    await sPatch('leads', id, lead);
+    Object.assign(allLeads.find(l => l.id === id), lead);
+    leads = leads.map(l => l.id === id ? { ...l, ...lead } : l);
+    closeModal('editLeadModal');
+    renderAllLeads();
+    toast('✅ Lead updated!');
+  } catch (e) {
+    toast('Error updating lead: ' + e.message, 'err');
+  }
+  
+  if (btn) { btn.disabled = false; btn.textContent = '💾 Save'; }
 }
 
 function renderAllLeads(){
@@ -1035,16 +1113,20 @@ function renderAllLeads(){
     const rating=l.rating?`<span style="color:#fdcb6e">${'★'.repeat(Math.round(parseFloat(l.rating)))} ${l.rating}</span>`:'—';
     const addr=(l.address||l.city||'—').split(',')[0];
     const cat=matchIndustry(l.industry||'')||l.industry||'—';
-    return`<tr style="cursor:pointer" onclick="openLeadDetail(${l.id})" title="Click for full details">
+    return`<tr>
       <td style="font-weight:500">${l.business}</td>
-      <td><a href="tel:${l.phone||''}" onclick="event.stopPropagation()" style="color:var(--a2);text-decoration:none">${l.phone||'—'}</a></td>
+      <td><a href="tel:${l.phone||''}" style="color:var(--a2);text-decoration:none">${l.phone||'—'}</a></td>
       <td><span class="tag s" style="font-size:9px">${cat}</span></td>
       <td style="color:var(--mu);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${addr}</td>
       <td style="color:var(--a2)">${l.assigned_to||'—'}</td>
       <td><span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;background:${clr}22;color:${clr}">${l.overall_status||'New'}</span></td>
       <td>${rating}</td>
+      <td style="display:flex;gap:5px">
+        <button class="btn sm" onclick="openLeadDetail(${l.id})">👁️ View</button>
+        <button class="btn danger sm" onclick="deleteLead(${l.id},${JSON.stringify(l.business)})">🗑️</button>
+      </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--mu2);padding:16px">No leads found</td></tr>';
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--mu2);padding:16px">No leads found</td></tr>';
 }
 
 function openLeadDetail(id){
@@ -1346,14 +1428,9 @@ async function uploadSheet(file){
             business:String(r['Name']||'—'),
             industry:String(r['Category']||'—'),
             city:String((r['Address']||'').split(',').slice(-2,-1)[0]||r['Address']||'—').trim(),
-            address:String(r['Address']||'—'),
             contact:String(r['Name']||'—'),
             phone:String(r['Phone']||''),
             email:String(r['Email']||''),
-            website:String(r['Website']||''),
-            maps_url:String(r['Maps URL']||''),
-            social_media:String(r['Social Media Links']||''),
-            rating:parseFloat(r['Rating'])||null,
             service:svcs||'All Services',
             interest:0,
             priority:'Medium',
@@ -1371,7 +1448,6 @@ async function uploadSheet(file){
             contact:String(r['Contact Person']||'—'),
             phone:String(r['Phone']||''),
             email:String(r['Email']||''),
-            website:'',maps_url:'',social_media:'',rating:null,
             service:String(r['Service Needed']||'—'),
             interest:parseInt(r['Interest %'])||0,
             priority:String(r['Priority']||'Medium'),
@@ -1426,6 +1502,26 @@ async function deleteAllSheets(){
   }
 }
 
+async function deleteLead(id,name){
+  if(!confirm(`Delete "${name}"?\nThis cannot be undone.`))return;
+  try{
+    await sDel('leads',id);
+    await logAct('Lead Deleted',null,name,'Manually deleted');
+    allLeads=allLeads.filter(l=>l.id!==id);
+    leads=leads.filter(l=>l.id!==id);
+    if(curLead&&curLead.id===id){
+      curLead=null;
+      document.getElementById('leadView').style.display='none';
+      document.getElementById('emptyState').style.display='flex';
+    }
+    renderAllLeads();
+    updateTopStats();
+    toast(`🗑️ Lead "${name}" deleted.`,'warn');
+  } catch(e){
+    toast('Error deleting lead: '+e.message,'err');
+  }
+}
+
 async function addSingleLead(){
   const biz=document.getElementById('slBiz').value.trim();
   const contact=document.getElementById('slContact').value.trim();
@@ -1437,6 +1533,7 @@ async function addSingleLead(){
   if(!worker){toast('Select a worker to assign!','warn');return;}
   const btn=document.querySelector('[onclick="addSingleLead()"]');
   if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const address=document.getElementById('slAddress').value.trim()||'';
   const lead={
     no:allLeads.length+1,
     business:biz,
@@ -1444,12 +1541,12 @@ async function addSingleLead(){
     phone,
     email:document.getElementById('slEmail').value.trim()||'',
     website:document.getElementById('slWebsite').value.trim()||'',
-    rating:parseFloat(document.getElementById('slRating').value)||null,
-    address:document.getElementById('slAddress').value.trim()||'',
-    city:(document.getElementById('slAddress').value.trim()||'').split(',')[0]||'',
+    address:address,
+    city:address.split(',')[0]||'',
     industry:document.getElementById('slIndustry').value.trim()||'—',
     maps_url:document.getElementById('slMaps').value.trim()||'',
     social_media:document.getElementById('slSocial').value.trim()||'',
+    rating:parseFloat(document.getElementById('slRating').value)||null,
     service:document.getElementById('slService').value||'All Services',
     priority:document.getElementById('slPriority').value||'Medium',
     interest:0,
@@ -1465,6 +1562,7 @@ async function addSingleLead(){
   });
   document.getElementById('slWorker').value='';
   await loadAdminData();
+  renderAllLeads();
   if(btn){btn.disabled=false;btn.textContent='➕ Add Lead';}
   toast(`✅ Lead "${biz}" added and assigned to ${worker}!`);
 }
