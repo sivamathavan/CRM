@@ -313,6 +313,11 @@ select option{background:var(--s2);color:var(--tx)}
 }
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .fu-anim{animation:fadeUp .28s ease both}
+/* Quick outcome chips */
+.qoc-row{display:none}
+/* Note chips */
+.note-chip{font-size:10px;padding:3px 9px;border-radius:100px;border:1px solid var(--b2);background:var(--s3);color:var(--mu);cursor:pointer;transition:all .15s;user-select:none}
+.note-chip:hover{border-color:var(--accent);color:var(--tx)}
 </style>
 </head>
 <body>
@@ -324,14 +329,13 @@ select option{background:var(--s2);color:var(--tx)}
   <div class="sp-tag">CRM · Telecalling · Team Management</div>
 
   <div class="sp-card">
-    <h2>Who are you?</h2>
+    <h2>Login</h2>
 
     <!-- Admin box -->
     <div class="admin-login-box" onclick="selectAdmin()">
       <div class="admin-login-left">
-        <div class="icon">👑</div>
         <div>
-          <div class="admin-login-name">Mathavan</div>
+          <div class="admin-login-name">Admin</div>
           <div class="admin-login-sub">Full access · Admin panel</div>
         </div>
       </div>
@@ -361,9 +365,9 @@ select option{background:var(--s2);color:var(--tx)}
     <div class="tb-logo">Rturox</div>
     <div class="tb-sep"></div>
     <div class="tb-chip" id="tbChip">—</div>
-    <div class="tb-stats">
+    <div class="tb-stats" id="tbStats">
       <span class="th">Total <b id="statTotal">0</b></span>
-      <span>📞 <b id="statCalled" style="color:#00b894">0</b></span>
+      <span id="calledStatWrap">📞 <b id="statCalled" style="color:#00b894">0</b> <span id="calledStatLabel" style="font-size:10px;color:var(--mu2)">called</span></span>
       <span class="th">🔥 <b id="statHot" style="color:#fd79a8">0</b></span>
     </div>
     <div class="tb-right">
@@ -386,10 +390,11 @@ select option{background:var(--s2);color:var(--tx)}
       <div class="nav-item active" onclick="showPage('dashboard',this)">📊 Dashboard</div>
       <div class="nav-item" onclick="showPage('activity',this)">📋 Activity <span class="nav-badge" id="actBadge">0</span></div>
       <div class="nav-sec">Management</div>
+      <div class="nav-item" onclick="showPage('calledlist',this)">📞 Called List</div>
       <div class="nav-item" onclick="showPage('workers',this)">👥 Workers</div>
       <div class="nav-item" onclick="showPage('sheets',this)">📄 Sheets</div>
-      <div class="nav-item" onclick="showPage('allleads',this)">🗂️ All Leads</div>
-      <div class="nav-item" onclick="showPage('followups',this)">📅 Follow-ups</div>
+      <div class="nav-item" onclick="showPage('allleads',this)">🗂️ All Leads <span class="nav-badge" id="exportBtn" style="cursor:pointer;background:rgba(0,184,148,.15);color:#00b894" onclick="event.stopPropagation();exportLeadsCSV()">CSV</span></div>
+      <div class="nav-item" onclick="showPage('followups',this)">📅 Follow-ups <span class="nav-badge" id="fuBadge" style="background:rgba(255,118,117,.2);color:#ff7675;display:none">0</span></div>
     </div>
     <div class="admin-main">
 
@@ -401,6 +406,18 @@ select option{background:var(--s2);color:var(--tx)}
         <div class="two-col-grid">
           <div class="card"><div class="card-title">👥 Worker Performance</div><div id="workerPerf"></div></div>
           <div class="card"><div class="card-title">📊 Status Breakdown</div><div id="statusBreak"></div></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">📞 Call Count per Worker</div>
+            <div style="display:flex;gap:5px">
+              <button class="fc" id="ccTab-today" onclick="switchCallTab('today')" style="border-radius:6px">Today</button>
+              <button class="fc" id="ccTab-week" onclick="switchCallTab('week')" style="border-radius:6px">Week</button>
+              <button class="fc" id="ccTab-month" onclick="switchCallTab('month')" style="border-radius:6px">Month</button>
+              <button class="fc active" id="ccTab-all" onclick="switchCallTab('all')" style="border-radius:6px">All Time</button>
+            </div>
+          </div>
+          <div id="callCountTable"></div>
         </div>
         <div class="card"><div class="card-title">📅 Today's Follow-ups</div><div id="todayFU"></div></div>
         <div class="card"><div class="card-title">⚡ Recent Activity</div><div id="recentAct"></div></div>
@@ -422,6 +439,24 @@ select option{background:var(--s2);color:var(--tx)}
             <input type="date" id="actDate" onchange="loadActivity()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
           </div>
           <div id="actList"></div>
+        </div>
+      </div>
+
+      <!-- CALLED LIST -->
+      <div class="admin-page" id="page-calledlist">
+        <div class="page-title">Called List</div>
+        <div class="page-sub">All called leads per worker — sorted A-Z &amp; by priority</div>
+        <div class="card">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <select id="clWorkerFilter" onchange="renderCalledList()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)"><option value="">All Workers</option></select>
+            <select id="clSortFilter" onchange="renderCalledList()" style="font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);font-family:var(--fb)">
+              <option value="az">A–Z</option>
+              <option value="priority">Priority</option>
+            </select>
+          </div>
+          <table class="dt"><thead><tr><th>Business</th><th>Phone</th><th>Worker</th><th>Status</th><th>Priority</th><th>Called At</th></tr></thead>
+          <tbody id="clTbody"></tbody></table>
+          <div id="clCount" style="font-size:11px;color:var(--mu2);margin-top:8px;text-align:right"></div>
         </div>
       </div>
 
@@ -497,7 +532,39 @@ select option{background:var(--s2);color:var(--tx)}
             📋 <strong>Expected columns:</strong> Name · Phone · Email · Address · Category · Rating · Website · Maps URL · Social Media Links · Priority Services
           </div>
           <div class="form-row">
-            <div class="afg"><label>Sheet Name</label><input type="text" id="sheetName" placeholder="e.g. Dental Clinics Coimbatore"></div>
+            <div class="afg">
+              <label>Sheet Name <span style="color:var(--mu);font-weight:400;font-size:10px">(must match an industry)</span></label>
+              <input type="text" id="sheetName" placeholder="Type to search industry…" list="industryList" autocomplete="off"
+                style="background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 11px;font-family:var(--fb);font-size:12px;color:var(--tx);outline:none;width:100%">
+              <datalist id="industryList">
+                <option value="Real Estate">
+                <option value="Jewelry Shops">
+                <option value="Clinics &amp; Hospitals">
+                <option value="Resorts &amp; Hotels">
+                <option value="Textile &amp; Boutiques">
+                <option value="Educational Institutions">
+                <option value="Restaurants &amp; Cafes">
+                <option value="Construction &amp; Interior Companies">
+                <option value="Travel &amp; Tourism Companies">
+                <option value="Furniture Stores">
+                <option value="Electronics &amp; Mobile Shops">
+                <option value="Supermarkets &amp; Grocery Chains">
+                <option value="Manufacturing Exporters">
+                <option value="Logistics &amp; Transport Companies">
+                <option value="Finance &amp; Financial Services">
+                <option value="Event Management Companies">
+                <option value="Gyms &amp; Fitness Centers">
+                <option value="Salons &amp; Beauty Clinics">
+                <option value="Wedding Industry Businesses">
+                <option value="Automobile Accessories &amp; Detailing">
+                <option value="Builders Material &amp; Hardware Businesses">
+                <option value="Franchise Businesses">
+                <option value="Legal &amp; Professional Services">
+                <option value="Agriculture &amp; Agri-Tech Businesses">
+                <option value="Religious &amp; Spiritual Tourism Businesses">
+                <option value="Coaching &amp; Personal Brands">
+              </datalist>
+            </div>
             <div class="afg"><label>Assign To Worker <span style="color:var(--mu);font-weight:400;font-size:10px">(optional — assign later)</span></label>
               <select id="sheetWorker" style="background:var(--bg2);border:1px solid var(--b2);border-radius:var(--rs);padding:7px 10px;font-size:12px;color:var(--tx);font-family:var(--fb);outline:none;width:100%"><option value="">— Unassigned —</option></select>
             </div>
@@ -522,17 +589,16 @@ select option{background:var(--s2);color:var(--tx)}
 
       <!-- SHEET EDIT MODAL -->
       <div id="sheetEditModal" class="modal-overlay hide" onclick="if(event.target===this)closeModal('sheetEditModal')">
-        <div class="modal-box" style="max-width:420px;width:95%">
+        <div class="modal-box" style="max-width:480px;width:95%">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div class="card-title" style="margin:0">✏️ Edit Sheet</div>
             <button class="btn sm" onclick="closeModal('sheetEditModal')" style="padding:4px 10px;opacity:.7">✕</button>
           </div>
           <input type="hidden" id="editSheetId">
           <div class="afg" style="margin-bottom:12px"><label>Sheet Name</label><input type="text" id="editSheetName" placeholder="Sheet name"></div>
-          <div class="afg" style="margin-bottom:16px"><label>Assign To Worker</label>
-            <select id="editSheetWorker" style="background:var(--bg2);border:1px solid var(--b2);border-radius:var(--rs);padding:7px 10px;font-size:12px;color:var(--tx);font-family:var(--fb);outline:none;width:100%">
-              <option value="">— Unassigned —</option>
-            </select>
+          <div class="afg" style="margin-bottom:16px">
+            <label>Assign To Workers <span style="color:var(--mu);font-weight:400">(select multiple)</span></label>
+            <div id="editSheetWorkerList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;padding:8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs)"></div>
           </div>
           <div style="display:flex;gap:8px">
             <button class="btn primary" onclick="saveSheetEdit()" style="flex:1;justify-content:center">💾 Save Changes</button>
@@ -596,12 +662,15 @@ select option{background:var(--s2);color:var(--tx)}
       <div class="sf">
         <button class="fc active" onclick="setFilter('all',this)">All</button>
         <button class="fc" onclick="setFilter('uncalled',this)">📞 Todo</button>
-        <button class="fc" onclick="setFilter('Interested',this)">✅ Hot</button>
+        <button class="fc" onclick="setFilter('called',this)">✅ Called</button>
+        <button class="fc" onclick="setFilter('Interested',this)">🔥 Hot</button>
         <button class="fc" onclick="setFilter('Call Back',this)">🔄 CB</button>
         <button class="fc" onclick="setFilter('Not Interested',this)">❌ No</button>
         <button class="fc" onclick="setFilter('High',this)">🔴 High</button>
       </div>
       <div class="ll" id="leadList"></div>
+      <!-- #2 Today follow-up alert banner -->
+      <div id="fuAlert" style="display:none;margin:6px 9px;padding:8px 11px;background:rgba(253,203,110,.1);border:1px solid rgba(253,203,110,.3);border-radius:var(--rs);font-size:11px;color:var(--amber);cursor:pointer" onclick="switchTab('followup',document.querySelector('#leadTabs [onclick*=followup]'))">📅 <b id="fuAlertCount">0</b> follow-up(s) due today — tap to view</div>
       <div class="sf-foot">
         <div><div class="sfv" id="sfTotal">0</div><div class="sfl">Total</div></div>
         <div><div class="sfv" id="sfShow">0</div><div class="sfl">Listed</div></div>
@@ -797,9 +866,25 @@ async function sendViaGmailAPI(){
 }
 
 // ── STATE ──
+// helper: check if a field has real content
+function hasVal(v){return !!(v&&v.trim&&v.trim()&&v.trim()!=='—'&&v.trim().toLowerCase()!=='null'&&v.trim().toLowerCase()!=='undefined');}
+
 let curUser='',curRole='',leads=[],filtered=[],workers=[],allLeads=[],sheets=[];
 let curLead=null,selOC='',activeFilter='all',pendingWorker=null;
 let saveLogBusy=false;
+
+// ── SESSION PERSISTENCE (survive refresh) ──
+function saveSession(){try{localStorage.setItem('crm_session',JSON.stringify({curUser,curRole}));}catch(e){}}
+function clearSession(){try{localStorage.removeItem('crm_session');}catch(e){}}
+async function restoreSession(){
+  try{
+    const s=JSON.parse(localStorage.getItem('crm_session')||'null');
+    if(!s||!s.curUser||!s.curRole)return false;
+    if(s.curRole==='admin'){await loginAdmin(s.curUser);return true;}
+    if(s.curRole==='worker'){await loginWorker(s.curUser);return true;}
+  }catch(e){}
+  return false;
+}
 const OCC={'Interested':'#00b894','Call Back':'#fdcb6e','Not Interested':'#ff7675','No Answer':'#8887a0','Busy':'#fdcb6e','Wrong Number':'#636e72','Won':'#4a6cf7','New':'rgba(108,92,231,.5)'};
 
 // ── SPLASH INIT ──
@@ -816,7 +901,7 @@ async function initSplash(){
       <span class="badge-worker">WORKER</span>
     </div>`).join('');
 }
-initSplash();
+restoreSession().then(restored=>{ if(!restored) initSplash(); });
 
 // FIX: Admin now goes through same passkey flow — reads passkey from workers table row where role='admin'
 function selectAdmin(){
@@ -854,8 +939,9 @@ function submitPasskey(){
   }
 }
 
-async function loginAdmin(){
-  curUser='Mathavan';curRole='admin';
+async function loginAdmin(restoredName){
+  curUser=restoredName||'Mathavan';curRole='admin';
+  saveSession();
   document.getElementById('tbChip').textContent='Mathavan';
   document.getElementById('tbChip').className='tb-chip chip-admin';
   document.getElementById('adminBtn').style.display='';
@@ -870,6 +956,7 @@ async function loginAdmin(){
 
 async function loginWorker(name){
   curUser=name;curRole='worker';
+  saveSession();
   document.getElementById('tbChip').textContent='👤 '+name;
   document.getElementById('tbChip').className='tb-chip chip-worker';
   document.getElementById('adminBtn').style.display='none';
@@ -877,27 +964,37 @@ async function loginWorker(name){
   document.getElementById('sortSel').style.display='';
   document.getElementById('passkeyBox').classList.remove('show');
   document.getElementById('splash').classList.add('hide');
+  // Hide Total from topbar for workers — only show their own called count
+  const tbStats=document.getElementById('tbStats');
+  if(tbStats)tbStats.querySelectorAll('.th').forEach(el=>el.style.display='none');
+  const calledLabel=document.getElementById('calledStatLabel');
+  if(calledLabel)calledLabel.textContent='today';
   setTimeout(()=>document.getElementById('app').classList.add('show'),400);
-  // Show skeleton while loading
   document.getElementById('leadList').innerHTML='<div style="padding:24px;text-align:center;color:var(--mu2);font-size:12px">☁️ Loading leads…</div>';
+  // load worker's own call_logs for today count
+  const today=new Date().toISOString().split('T')[0];
+  const cl=await sGet('call_logs',`select=called_by,called_at&called_by=eq.${encodeURIComponent(name)}&called_at=gte.${today}T00:00:00&limit=500`);
+  callLogs=Array.isArray(cl)?cl:[];
   await loadWorkerLeads(name);
   showCRMView();
-  // FIX: restore last selected lead from sessionStorage
   const savedId=sessionStorage.getItem('lastLeadId_'+name);
   if(savedId){const l=leads.find(x=>String(x.id)===savedId);if(l)selectLead(l.id);}
 }
 
 // ── ADMIN DATA ──
+let callLogs=[];
 async function loadAdminData(){
-  const [ws,ss,ls,al]=await Promise.all([
+  const [ws,ss,ls,al,cl]=await Promise.all([
     sGet('workers','select=*&order=id'),
     sGet('sheets','select=*&order=created_at.desc'),
     sGet('leads','select=*&limit=2000&order=id.desc'),
     sGet('activity_log','select=*&order=created_at.desc&limit=100'),
+    sGet('call_logs','select=called_by,called_at&order=called_at.desc&limit=5000'),
   ]);
   workers=Array.isArray(ws)?ws:[];
   sheets=Array.isArray(ss)?ss:[];
   allLeads=Array.isArray(ls)?ls:[];
+  callLogs=Array.isArray(cl)?cl:[];
   leads=allLeads;filtered=leads;
   updateTopStats();
   renderDashboard(al||[]);
@@ -906,14 +1003,43 @@ async function loadAdminData(){
   renderAllLeads();
   populateSelects();
   renderAllFollowups();
+  updateOverdueBadge();
+  renderDailyTargets();
+  switchCallTab('all');
 }
 
 function updateTopStats(){
-  const called=leads.filter(l=>l.called).length;
-  const hot=leads.filter(l=>l.overall_status==='Interested').length;
-  ['statTotal','sfTotal'].forEach(id=>document.getElementById(id).textContent=leads.length);
-  ['statCalled','sfCalled'].forEach(id=>document.getElementById(id).textContent=called);
-  ['statHot','sfHot'].forEach(id=>document.getElementById(id).textContent=hot);
+  const myLeads=curRole==='worker'?leads:allLeads;
+  const hot=myLeads.filter(l=>l.overall_status==='Interested').length;
+  ['statTotal','sfTotal'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=myLeads.length;});
+  ['statHot','sfHot'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=hot;});
+  // Called count: for workers = today's calls by them (9am-9pm window), for admin = all-time total
+  if(curRole==='worker'){
+    const todayCount=getTodayCallCount(curUser);
+    ['statCalled','sfCalled'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=todayCount;});
+  } else {
+    const called=allLeads.filter(l=>l.called).length;
+    ['statCalled','sfCalled'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=called;});
+  }
+}
+
+// Returns today's call count for a worker within 9am-9pm window
+function getTodayCallCount(workerName){
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth(),d=now.getDate();
+  const start=new Date(y,m,d,9,0,0).getTime();
+  const end=new Date(y,m,d,21,0,0).getTime();
+  // use callLogs if admin loaded them, else count from leads
+  if(callLogs.length){
+    return callLogs.filter(l=>{
+      if(l.called_by!==workerName)return false;
+      const t=new Date(l.called_at).getTime();
+      return t>=start&&t<=end;
+    }).length;
+  }
+  // worker fallback: count leads called today
+  const todayStr=now.toISOString().split('T')[0];
+  return leads.filter(l=>l.called&&l.updated_at&&l.updated_at.startsWith(todayStr)).length;
 }
 
 function renderDashboard(al){
@@ -999,7 +1125,7 @@ function renderWorkersTable(){
         ${w.role!=='admin'?`
           <button class="btn sm" onclick="openEditWorker(${w.id})">✏️ Passkey</button>
           <button class="btn danger sm" onclick="removeWorker(${w.id},'${w.name}')">🗑️</button>
-        `:'—'}
+        `:`<button class="btn sm" onclick="openEditWorker(${w.id})">🔑 Set Passkey</button>`}
       </td>
     </tr>`;
   }).join('');
@@ -1008,13 +1134,13 @@ function renderWorkersTable(){
 function renderSheetsTable(){
   document.getElementById('sheetsTbody').innerHTML=sheets.map(s=>{
     const dt=new Date(s.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
-    const assignedLabel=s.assigned_to
-      ?`<span style="color:var(--a2)">${s.assigned_to}</span>`
-      :`<span style="color:#fdcb6e;font-size:10px;font-weight:600">⚠️ Unassigned</span>`;
+    const actualCount=allLeads.filter(l=>l.sheet_id===s.id).length;
+    const assigned=s.assigned_to||'';
+    const workers_list=assigned?assigned.split(',').map(w=>`<span style="color:var(--a2)">${w.trim()}</span>`).join(', '):`<span style="color:#fdcb6e;font-size:10px;font-weight:600">⚠️ Unassigned</span>`;
     return`<tr>
       <td style="font-weight:500">${s.name}</td>
-      <td>${assignedLabel}</td>
-      <td>${s.total_leads}</td>
+      <td>${workers_list}</td>
+      <td>${actualCount}</td>
       <td style="color:var(--mu)">${dt}</td>
       <td style="display:flex;gap:5px">
         <button class="btn sm" onclick="openSheetEdit(${s.id})">✏️ Edit</button>
@@ -1123,10 +1249,14 @@ function renderAllLeads(){
       <td>${rating}</td>
       <td style="display:flex;gap:5px">
         <button class="btn sm" onclick="openLeadDetail(${l.id})">👁️ View</button>
-        <button class="btn danger sm" onclick="deleteLead(${l.id},${JSON.stringify(l.business)})">🗑️</button>
+        <button class="btn danger sm" onclick="deleteLeadFromTable(${l.id},'${(l.business||'').replace(/'/g,"\\'")}')">🗑️</button>
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--mu2);padding:16px">No leads found</td></tr>';
+}
+
+function deleteLeadFromTable(id,name){
+  deleteLead(id,name);
 }
 
 function openLeadDetail(id){
@@ -1187,8 +1317,10 @@ async function loadActivity(){
   let q='order=created_at.desc&limit=200';
   const wf=document.getElementById('actWF').value;
   const af=document.getElementById('actAF').value;
+  const dateVal=document.getElementById('actDate').value;
   if(wf)q+=`&worker_name=eq.${encodeURIComponent(wf)}`;
   if(af)q+=`&action=eq.${af}`;
+  if(dateVal){const d0=dateVal+'T00:00:00.000Z';const d1=dateVal+'T23:59:59.999Z';q+=`&created_at=gte.${d0}&created_at=lte.${d1}`;}
   const logs=await sGet('activity_log',q);
   let currentDay = '';
   let html = '';
@@ -1315,12 +1447,37 @@ function setIndFilter(val){
 
 function populateSelects(){
   const nonAdmin=workers.filter(w=>w.role!=='admin');
-  ['sheetWorker','actWF','alWorker','slWorker'].forEach(id=>{
+  ['sheetWorker','actWF','alWorker','slWorker','clWorkerFilter'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const first=el.options[0];el.innerHTML='';el.appendChild(first);
     nonAdmin.forEach(w=>{const o=document.createElement('option');o.value=w.name;o.textContent=w.name;el.appendChild(o);});
   });
   renderIndustryChips();
+}
+
+function renderCalledList(){
+  const wf=document.getElementById('clWorkerFilter')?.value||'';
+  const sort=document.getElementById('clSortFilter')?.value||'az';
+  let rows=allLeads.filter(l=>l.called&&(!wf||(l.assigned_to||'')===wf));
+  if(sort==='az')rows.sort((a,b)=>(a.business||'').localeCompare(b.business||''));
+  else rows.sort((a,b)=>{
+    const po={High:0,Medium:1,Low:2};
+    return(po[a.priority||'Medium']||1)-(po[b.priority||'Medium']||1)||(a.business||'').localeCompare(b.business||'');
+  });
+  const cnt=document.getElementById('clCount');
+  if(cnt)cnt.textContent=`${rows.length} called lead${rows.length!==1?'s':''}`;
+  document.getElementById('clTbody').innerHTML=rows.map(l=>{
+    const clr=OCC[l.overall_status||'New']||OCC['New'];
+    const pc={High:'#fd79a8',Medium:'#fdcb6e',Low:'#8887a0'};
+    return`<tr>
+      <td style="font-weight:500">${l.business}</td>
+      <td><a href="tel:${l.phone||''}" style="color:var(--a2);text-decoration:none">${l.phone||'—'}</a></td>
+      <td style="color:var(--a2)">${l.assigned_to||'—'}</td>
+      <td><span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;background:${clr}22;color:${clr}">${l.overall_status||'New'}</span></td>
+      <td><span style="font-size:9px;font-weight:700;color:${pc[l.priority||'Medium']||'#fdcb6e'}">${l.priority||'Medium'}</span></td>
+      <td style="color:var(--mu);font-size:11px">${l.updated_at?new Date(l.updated_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'-'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--mu2);padding:16px">No called leads yet</td></tr>';
 }
 
 async function addWorker(){
@@ -1369,8 +1526,11 @@ sheetDZ.addEventListener('drop',e=>{e.preventDefault();sheetDZ.classList.remove(
 
 async function uploadSheet(file){
   if(!file)return;
-  const worker=document.getElementById('sheetWorker').value; // optional now — can assign later
-  const sname=document.getElementById('sheetName').value.trim()||file.name.replace(/\.xlsx?$/,'');
+  const VALID_IND=['Real Estate','Jewelry Shops','Clinics & Hospitals','Resorts & Hotels','Textile & Boutiques','Educational Institutions','Restaurants & Cafes','Construction & Interior Companies','Travel & Tourism Companies','Furniture Stores','Electronics & Mobile Shops','Supermarkets & Grocery Chains','Manufacturing Exporters','Logistics & Transport Companies','Finance & Financial Services','Event Management Companies','Gyms & Fitness Centers','Salons & Beauty Clinics','Wedding Industry Businesses','Automobile Accessories & Detailing','Builders Material & Hardware Businesses','Franchise Businesses','Legal & Professional Services','Agriculture & Agri-Tech Businesses','Religious & Spiritual Tourism Businesses','Coaching & Personal Brands'];
+  const worker=document.getElementById('sheetWorker').value;
+  const sname=document.getElementById('sheetName').value.trim();
+  if(!sname){toast('Enter a sheet name!','warn');return;}
+  if(!VALID_IND.includes(sname)){toast('Sheet name must be one of the 26 industries. Type to search and select from the list.','warn');document.getElementById('sheetName').focus();return;}
   const pw=document.getElementById('sheetProg');
   const pf=document.getElementById('sheetProgFill');
   const pm=document.getElementById('sheetProgMsg');
@@ -1379,67 +1539,88 @@ async function uploadSheet(file){
   reader.onload=async e=>{
     const wb=XLSX.read(e.target.result,{type:'array'});
     const sn=wb.SheetNames.find(n=>n.includes('Follow-Up')||n.includes('Tracker'))||wb.SheetNames[0];
-    const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:''});
-    if(!rawRows.length){pm.textContent='❌ Sheet is empty!';setTimeout(()=>pw.classList.remove('show'),3000);return;}
-
+    const rawRowsOrig=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:''});
+    if(!rawRowsOrig.length){pm.textContent='❌ Sheet is empty!';setTimeout(()=>pw.classList.remove('show'),3000);return;}
+    // Normalize all column keys: trim whitespace so " Phone " becomes "Phone"
+    const rawRows=rawRowsOrig.map(row=>{
+      const clean={};
+      Object.keys(row).forEach(k=>{clean[k.trim()]=typeof row[k]==='string'?row[k].trim():row[k];});
+      return clean;
+    });
     // Detect format by checking first row keys
     const keys=Object.keys(rawRows[0]);
-    const isNewFormat=keys.includes('Name')&&keys.includes('Phone')&&!keys.includes('Business Name');
-    const isOldFormat=keys.includes('Business Name');
-
+    const isNewFormat=keys.some(k=>k==='Name')&&keys.some(k=>k==='Phone')&&!keys.some(k=>k==='Business Name');
+    const isOldFormat=keys.some(k=>k==='Business Name');
     if(!isNewFormat&&!isOldFormat){
-      pm.textContent=`❌ Unknown format. Need "Name" or "Business Name" column.`;
-      setTimeout(()=>pw.classList.remove('show'),3500);return;
+      pm.textContent=`❌ Unknown format. Columns found: ${keys.slice(0,6).join(', ')}`;
+      setTimeout(()=>pw.classList.remove('show'),4000);return;
     }
-
     const rows=rawRows.filter(r=>isNewFormat?(r['Name']||r['Phone']):(r['Business Name']||r['Contact Person']));
 
-    // DUPLICATE CHECK: fetch all existing phone numbers from DB
+    // DUPLICATE CHECK: fetch all existing phones from DB (raw)
     pm.textContent='Checking for duplicates…';
     const existingPhones=new Set();
     let offset=0;
     while(true){
       const batch=await sGet('leads',`select=phone&limit=1000&offset=${offset}`);
       if(!Array.isArray(batch)||!batch.length)break;
-      batch.forEach(l=>{const p=(l.phone||'').replace(/\D/g,'').replace(/^0/,'91');if(p)existingPhones.add(p);});
+      batch.forEach(l=>{const p=String(l.phone||'').trim();if(p)existingPhones.add(p);});
       if(batch.length<1000)break;
       offset+=1000;
     }
-    const cleanPhone=p=>String(p||'').replace(/\D/g,'').replace(/^0/,'91');
-    const newRows=rows.filter(r=>{
-      const phone=cleanPhone(isNewFormat?r['Phone']:r['Phone']);
-      return !phone||!existingPhones.has(phone);
+    const cleanPhone=p=>String(p||'').trim();
+    // Separate new vs existing
+    const newRows=[];
+    const patchRows=[];
+    rows.forEach(r=>{
+      const phone=cleanPhone(r['Phone']);
+      if(!phone||!existingPhones.has(phone))newRows.push(r);
+      else patchRows.push(r);
     });
-    const dupCount=rows.length-newRows.length;
-    if(!newRows.length){
-      pm.textContent=`⚠️ All ${rows.length} leads already exist (duplicate phones). Nothing added.`;
+    const dupCount=patchRows.length;
+    pm.textContent=`🔍 ${newRows.length} new leads, ${dupCount} existing. Processing…`;
+    await new Promise(r=>setTimeout(r,600));
+    if(!newRows.length&&!dupCount){
+      pm.textContent=`⚠️ Sheet is empty after filtering.`;
       setTimeout(()=>pw.classList.remove('show'),3500);return;
     }
-    const sheetRec=await sPost('sheets',[{name:sname,uploaded_by:curUser,assigned_to:worker||null,total_leads:newRows.length}]);
-    const sheetId=Array.isArray(sheetRec)&&sheetRec[0]?sheetRec[0].id:null;
+    // If all are duplicates, still patch missing fields then reload
+    if(!newRows.length){
+      pm.textContent=`All ${rows.length} leads already exist — patching missing fields…`;
+    }
+    let sheetId=null;
+    if(newRows.length){
+      const sheetRec=await sPost('sheets',[{name:sname,uploaded_by:curUser,assigned_to:worker||null,total_leads:newRows.length}]);
+      if(sheetRec&&sheetRec.error){pm.textContent=`❌ Sheet save error: ${sheetRec.error.message||JSON.stringify(sheetRec)}`;return;}
+      if(Array.isArray(sheetRec)&&sheetRec[0])sheetId=sheetRec[0].id;
+      else{pm.textContent=`❌ Sheet insert failed: ${JSON.stringify(sheetRec)}`;return;}
+    }
     const batch=50;
     for(let i=0;i<newRows.length;i+=batch){
       const chunk=newRows.slice(i,i+batch).map((r,ri)=>{
         if(isNewFormat){
-          // New format: Name Phone Email Address Category Rating Website Maps URL Social Media Links Priority Services
-          const svcs=(r['Priority Services']||'').replace(/[⚙️📱📣🌐]/g,'').trim();
+          const svcs=(r['Priority Services']||r['PriorityServices']||'').replace(/[\u2699\ufe0f\ud83d\udcf1\ud83d\udce3\ud83c\udf10]/g,'').trim();
+          const rawAddr=String(r['Address']||'');
+          const cityPart=rawAddr.split(',').slice(-2,-1)[0]||rawAddr.split(',')[0]||rawAddr;
           return {
             no:i+ri+1,
             business:String(r['Name']||'—'),
             industry:String(r['Category']||'—'),
-            city:String((r['Address']||'').split(',').slice(-2,-1)[0]||r['Address']||'—').trim(),
+            city:cityPart.trim()||'—',
             contact:String(r['Name']||'—'),
             phone:String(r['Phone']||''),
             email:String(r['Email']||''),
+            website:String(r['Website']||'').replace(/&amp;/g,'&').trim(),
+            maps_url:String(r['Maps URL']||r['MapsURL']||'').replace(/&amp;/g,'&').trim(),
+            social_media:String(r['Social Media Links']||r['SocialMediaLinks']||'').trim(),
+            rating:parseFloat(r['Rating'])||null,
+            address:rawAddr,
             service:svcs||'All Services',
-            interest:0,
-            priority:'Medium',
-            overall_status:'New',
+            interest:0,priority:'Medium',overall_status:'New',
             stage:'Lead',wa_sent:false,email_sent:false,called:false,
-            sheet_id:sheetId,assigned_to:worker,
+            sheet_id:sheetId,assigned_to:worker||null,
           };
         } else {
-          // Old Rturox format
           return {
             no:parseInt(r['No'])||i+ri+1,
             business:String(r['Business Name']||'—'),
@@ -1451,20 +1632,55 @@ async function uploadSheet(file){
             service:String(r['Service Needed']||'—'),
             interest:parseInt(r['Interest %'])||0,
             priority:String(r['Priority']||'Medium'),
-            overall_status:'New',
-            stage:'Lead',wa_sent:false,email_sent:false,called:false,
-            sheet_id:sheetId,assigned_to:worker,
+            overall_status:'New',stage:'Lead',
+            wa_sent:false,email_sent:false,called:false,
+            sheet_id:sheetId,assigned_to:worker||null,
           };
         }
       });
-      await sPost('leads',chunk);
+      const res=await sPost('leads',chunk);
+      if(res&&res.code==='PGRST204'||res&&res.message&&res.message.includes('column')){
+        // Column doesn't exist — strip extra fields and retry
+        const safe=chunk.map(({address,website,maps_url,social_media,rating,...rest})=>rest);
+        const res2=await sPost('leads',safe);
+        if(res2&&res2.error){pm.textContent=`❌ Insert error: ${res2.error.message}`;return;}
+        if(!Array.isArray(res2)){pm.textContent=`❌ DB error: ${JSON.stringify(res2).substring(0,150)}`;return;}
+      } else if(res&&res.error){pm.textContent=`❌ Insert error: ${res.error.message||JSON.stringify(res.error)}`;return;}
+      else if(!Array.isArray(res)){pm.textContent=`❌ Unexpected: ${JSON.stringify(res).substring(0,150)}`;return;}
       pf.style.width=Math.min(Math.round(((i+batch)/newRows.length)*100),100)+'%';
       pm.textContent=`Uploading ${Math.min(i+batch,newRows.length)}/${newRows.length}…`;
+      await new Promise(r=>setTimeout(r,100));
     }
-    const dupMsg=dupCount?` (${dupCount} duplicate${dupCount!==1?'s':''} skipped)`:'';
-    pm.textContent=`✅ ${newRows.length} leads added${dupMsg}`;
-    await logAct('Sheet Upload',null,null,`"${sname}" → ${worker||'Unassigned'} (${newRows.length} new, ${dupCount} skipped)`);
-    setTimeout(()=>{pw.classList.remove('show');loadAdminData();},1200);
+    // Patch existing leads with missing website/maps/social/rating
+    let patched=0;
+    if(isNewFormat&&patchRows.length){
+      pm.textContent=`Patching ${patchRows.length} existing leads with missing fields…`;
+      for(const r of patchRows){
+        const phone=cleanPhone(r['Phone']);
+        const website=String(r['Website']||'').replace(/&amp;/g,'&').trim();
+        const maps_url=String(r['Maps URL']||r['MapsURL']||'').replace(/&amp;/g,'&').trim();
+        const social_media=String(r['Social Media Links']||r['SocialMediaLinks']||'').trim();
+        const rating=parseFloat(r['Rating'])||null;
+        const address=String(r['Address']||'').trim();
+        if(!website&&!maps_url&&!social_media&&!rating&&!address)continue;
+        const found=await sGet('leads',`select=id,website,maps_url,social_media,rating,address&phone=eq.${encodeURIComponent(phone)}&limit=1`);
+        if(Array.isArray(found)&&found[0]){
+          const existing=found[0];
+          const update={};
+          if(website&&!hasVal(existing.website))update.website=website;
+          if(maps_url&&!hasVal(existing.maps_url))update.maps_url=maps_url;
+          if(social_media&&!hasVal(existing.social_media))update.social_media=social_media;
+          if(rating&&!existing.rating)update.rating=rating;
+          if(address&&!hasVal(existing.address))update.address=address;
+          if(Object.keys(update).length){await sPatch('leads',existing.id,update);patched++;}
+        }
+      }
+    }
+    const dupMsg=dupCount?` (${patched} patched, ${dupCount-patched} unchanged)`:'';
+    const addMsg=newRows.length?`✅ ${newRows.length} leads added${dupMsg}`:`✅ ${patched} existing leads updated with missing fields`;
+    pm.textContent=addMsg;
+    await logAct('Sheet Upload',null,null,`"${sname}" → ${worker||'Unassigned'} (${newRows.length} new, ${patched} patched)`);
+    setTimeout(()=>{pw.classList.remove('show');loadAdminData();},1500);
     document.getElementById('sheetName').value='';
     document.getElementById('sheetFile').value='';
   };
@@ -1533,7 +1749,17 @@ async function addSingleLead(){
   if(!worker){toast('Select a worker to assign!','warn');return;}
   const btn=document.querySelector('[onclick="addSingleLead()"]');
   if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  // #11 duplicate phone check
+  const existCheck=await sGet('leads',`select=id&phone=eq.${encodeURIComponent(phone)}&limit=1`);
+  if(Array.isArray(existCheck)&&existCheck.length){
+    toast(`⚠️ Phone ${phone} already exists in CRM!`,'warn');
+    if(btn){btn.disabled=false;btn.textContent='➕ Add Lead';}
+    return;
+  }
   const address=document.getElementById('slAddress').value.trim()||'';
+  const industry=document.getElementById('slIndustry').value.trim()||'—';
+  const addrParts=address.split(',');
+  const city=addrParts.length>1?addrParts[addrParts.length-1].trim():address.trim();
   const lead={
     no:allLeads.length+1,
     business:biz,
@@ -1542,19 +1768,21 @@ async function addSingleLead(){
     email:document.getElementById('slEmail').value.trim()||'',
     website:document.getElementById('slWebsite').value.trim()||'',
     address:address,
-    city:address.split(',')[0]||'',
-    industry:document.getElementById('slIndustry').value.trim()||'—',
+    city:city||address,
+    industry:industry,
     maps_url:document.getElementById('slMaps').value.trim()||'',
     social_media:document.getElementById('slSocial').value.trim()||'',
     rating:parseFloat(document.getElementById('slRating').value)||null,
     service:document.getElementById('slService').value||'All Services',
     priority:document.getElementById('slPriority').value||'Medium',
     interest:0,
-    overall_status:'New',stage:'Lead',
+    overall_status:'New',
+    stage:'Lead',
     wa_sent:false,email_sent:false,called:false,
-    sheet_id:null,assigned_to:worker,
+    assigned_to:worker,
   };
-  await sPost('leads',[lead]);
+  const res=await sPost('leads',[lead]);
+  const newLead=Array.isArray(res)&&res[0]?res[0]:{...lead,id:Date.now()};
   await logAct('Lead Added',null,biz,`Single lead added manually → ${worker}`);
   // Clear form
   ['slBiz','slContact','slPhone','slEmail','slWebsite','slRating','slAddress','slIndustry','slMaps','slSocial'].forEach(id=>{
@@ -1562,9 +1790,15 @@ async function addSingleLead(){
   });
   document.getElementById('slWorker').value='';
   await loadAdminData();
+  renderIndustryChips();
   renderAllLeads();
   if(btn){btn.disabled=false;btn.textContent='➕ Add Lead';}
-  toast(`✅ Lead "${biz}" added and assigned to ${worker}!`);
+  // Navigate to All Leads filtered by this worker so admin can see it immediately
+  const alNav=document.querySelector('.nav-item[onclick*="allleads"]');
+  showPage('allleads', alNav);
+  document.getElementById('alWorker').value=worker;
+  renderAllLeads();
+  toast(`✅ Lead "${biz}" added → ${worker}. Showing in All Leads now.`);
 }
 
 function openSheetEdit(id){
@@ -1572,37 +1806,59 @@ function openSheetEdit(id){
   if(!s)return;
   document.getElementById('editSheetId').value=id;
   document.getElementById('editSheetName').value=s.name||'';
-  const sel=document.getElementById('editSheetWorker');
   const nonAdmin=workers.filter(w=>w.role!=='admin');
-  sel.innerHTML='<option value="">— Unassigned —</option>';
-  nonAdmin.forEach(w=>{
-    const o=document.createElement('option');
-    o.value=w.name;o.textContent=w.name;
-    if(w.name===s.assigned_to)o.selected=true;
-    sel.appendChild(o);
-  });
+  // assigned_to may be comma-separated for multi-worker
+  const assigned=(s.assigned_to||'').split(',').map(x=>x.trim()).filter(Boolean);
+  const list=document.getElementById('editSheetWorkerList');
+  list.innerHTML=nonAdmin.map(w=>`
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0">
+      <input type="checkbox" value="${w.name}" ${assigned.includes(w.name)?'checked':''}
+        style="width:14px;height:14px;accent-color:var(--accent)">
+      <span>${w.name}</span>
+    </label>`).join('');
   document.getElementById('sheetEditModal').classList.remove('hide');
 }
 
 async function saveSheetEdit(){
   const id=document.getElementById('editSheetId').value;
   const name=document.getElementById('editSheetName').value.trim();
-  const worker=document.getElementById('editSheetWorker').value;
   if(!name){toast('Enter a sheet name!','warn');return;}
+  const checked=[...document.querySelectorAll('#editSheetWorkerList input[type=checkbox]:checked')].map(c=>c.value);
   const btn=document.querySelector('[onclick="saveSheetEdit()"]');
   if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  await sPatch('sheets',id,{name,assigned_to:worker||null});
-  // reassign all leads in this sheet to the new worker
-  await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`,{method:'PATCH',headers:SH,body:JSON.stringify({assigned_to:worker||null})});
-  await logAct('Sheet Updated',null,null,`"${name}" reassigned → ${worker||'Unassigned'}`);
+  // Update sheet record — store first worker in assigned_to for backward compat, full list as comma string
+  const assignedStr=checked.join(',');
+  await sPatch('sheets',id,{name,assigned_to:assignedStr||null});
+  // Assign leads split evenly across selected workers (no duplication)
+  if(checked.length===0){
+    await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`,{method:'PATCH',headers:SH,body:JSON.stringify({assigned_to:null})});
+  } else if(checked.length===1){
+    await fetch(`${SU}/rest/v1/leads?sheet_id=eq.${id}`,{method:'PATCH',headers:SH,body:JSON.stringify({assigned_to:checked[0]})});
+  } else {
+    const sheetLeads=await sGet('leads',`select=id&sheet_id=eq.${id}&limit=2000&order=id.asc`);
+    const ids=Array.isArray(sheetLeads)?sheetLeads.map(l=>l.id):[];
+    const chunkSize=Math.ceil(ids.length/checked.length);
+    for(let wi=0;wi<checked.length;wi++){
+      const slice=ids.slice(wi*chunkSize,(wi+1)*chunkSize);
+      if(!slice.length)continue;
+      // patch each slice — Supabase supports in() filter
+      await fetch(`${SU}/rest/v1/leads?id=in.(${slice.join(',')})`,{method:'PATCH',headers:SH,body:JSON.stringify({assigned_to:checked[wi]})});
+    }
+  }
+  await logAct('Sheet Updated',null,null,`"${name}" assigned → ${assignedStr||'Unassigned'}`);
   closeModal('sheetEditModal');
   await loadAdminData();
   if(btn){btn.disabled=false;btn.textContent='💾 Save Changes';}
-  toast(`✅ Sheet "${name}" → ${worker||'Unassigned'}`);
+  toast(`✅ Sheet "${name}" → ${assignedStr||'Unassigned'}`);
 }
 
 async function loadWorkerLeads(name){
   let data=await sGet('leads',`select=*&assigned_to=eq.${encodeURIComponent(name)}&limit=2000&order=id.desc`);
+  if(!Array.isArray(data)||data.error){
+    // fallback: fetch all and filter client-side (handles encoding edge cases)
+    const all=await sGet('leads','select=*&limit=2000&order=id.desc');
+    data=Array.isArray(all)?all.filter(l=>l.assigned_to===name):[];
+  }
   // FIX: removed fallback that silently loaded ALL leads — show proper empty state instead
   leads=Array.isArray(data)?data:[];
   filtered=leads;
@@ -1610,6 +1866,7 @@ async function loadWorkerLeads(name){
   applyFilters();
   loadFollowupTab();
   loadNotIntTab();
+  showFollowupAlert();
   if(!leads.length){
     document.getElementById('leadList').innerHTML='<div style="padding:24px;text-align:center;color:var(--mu2);font-size:12px">No leads assigned yet.<br>Ask your admin to upload and assign a sheet.</div>';
   }
@@ -1640,6 +1897,7 @@ function showPage(page,el){
   if(el)el.classList.add('active');
   if(page==='activity')loadActivity();
   if(page==='followups')renderAllFollowups();
+  if(page==='calledlist')renderCalledList();
 }
 function closeModal(id){document.getElementById(id).classList.add('hide')}
 
@@ -1656,6 +1914,7 @@ function applyFilters(){
     const mq=!q||[l.business,l.contact,l.city,l.service,l.industry].some(v=>(v||'').toLowerCase().includes(q));
     let mf=true;
     if(activeFilter==='uncalled')mf=!l.called;
+    else if(activeFilter==='called')mf=l.called;
     else if(activeFilter==='Interested')mf=l.overall_status==='Interested';
     else if(activeFilter==='Call Back')mf=l.overall_status==='Call Back';
     else if(activeFilter==='Not Interested')mf=l.overall_status==='Not Interested';
@@ -1665,7 +1924,16 @@ function applyFilters(){
   filtered.sort((a,b)=>{
     if(sort==='uncalled')return(a.called?1:0)-(b.called?1:0);
     if(sort==='interest')return b.interest-a.interest;
-    if(sort==='priority')return(a.priority==='High'?0:1)-(b.priority==='High'?0:1);
+    if(sort==='priority'){
+      const po={High:0,Medium:1,Low:2};
+      const pa=po[a.priority||'Medium']??1;
+      const pb=po[b.priority||'Medium']??1;
+      if(pa!==pb)return pa-pb;
+      // within same priority: no-website leads first
+      const wa=!hasVal(a.website)?0:1;
+      const wb=!hasVal(b.website)?0:1;
+      return wa-wb;
+    }
     return(a.business||'').localeCompare(b.business||'');
   });
   document.getElementById('sfShow').textContent=filtered.length;
@@ -1682,11 +1950,26 @@ function renderList(){
     const loc=l.city&&l.city!=='—'?l.city:(l.address||'—').split(',')[0];
     const cat=l.industry&&l.industry!=='—'?l.industry:(l.service&&l.service!=='—'?l.service:'');
     const pct=parseInt(l.interest)||0;
+    // #1 quick outcome chips on each list item
+    const qoc=`<div class="qoc-row" onclick="event.stopPropagation()">
+      <span class="qoc" onclick="quickOutcome(${l.id},'Interested',this)" title="Interested">✅</span>
+      <span class="qoc" onclick="quickOutcome(${l.id},'No Answer',this)" title="No Answer">📵</span>
+      <span class="qoc" onclick="quickOutcome(${l.id},'Busy',this)" title="Busy">⏳</span>
+      <span class="qoc" onclick="quickOutcome(${l.id},'Call Back',this)" title="Call Back">🔄</span>
+      <span class="qoc" onclick="quickOutcome(${l.id},'Not Interested',this)" title="Not Interested">❌</span>
+    </div>`;
     return`<div class="li${curLead&&curLead.id===l.id?' active':''}${l.called?' called':''}" onclick="selectLead(${l.id})">
       <div class="li-top"><div class="li-name">${l.business}</div><div class="pd ${(l.priority||'medium').toLowerCase()}"></div></div>
-      <div class="li-meta">${l.contact||'—'} · ${loc}</div>
-      <div class="li-tags">${cat?`<span class="tag s">${cat}</span>`:''} ${pct?`<span class="tag">${pct}%</span>`:''} ${l.called?'<span class="tag" style="color:#00b894;border-color:rgba(0,184,148,.2)">📞</span>':''}</div>
+      <div class="li-meta">${l.contact||'—'} · ${loc}${l.phone?` · ${l.phone}`:''}</div>
+      <div class="li-tags">
+        ${cat?`<span class="tag s">${cat}</span>`:''}
+        ${l.rating?`<span class="tag" style="color:#fdcb6e">★${l.rating}</span>`:''}
+        ${!hasVal(l.website)?`<span class="tag" style="color:#ff7675;border-color:rgba(255,118,117,.3)">❌ No Web</span>`:''}
+        ${pct?`<span class="tag">${pct}%</span>`:''}
+        ${l.called?'<span class="tag" style="color:#00b894;border-color:rgba(0,184,148,.2)">📞</span>':''}
+      </div>
       ${l.overall_status&&l.overall_status!=='New'?`<div class="li-sb" style="background:${sc}22;color:${sc};border:1px solid ${sc}44">${l.overall_status}</div>`:''}
+      ${qoc}
     </div>`;
   }).join('');
 }
@@ -1730,23 +2013,29 @@ function renderLeadView(l){
       <div class="av">${ini}</div>
       <div class="lhi">
         <div class="lh-name">${l.business}</div>
-        <div class="lh-meta">${cat?cat+' · ':''}${loc} · ${l.contact}${ratingStr} · 📞 ${l.phone||'—'}</div>
+        <div class="lh-meta">${cat?cat+' · ':''}${loc} · ${l.contact}${ratingStr}</div>
         <div class="ibar">
           ${pct?`<div class="itrack"><div class="ifill" style="width:${pct}%"></div></div><span class="ipct">${pct}%</span>`:''}
-          <span style="font-size:10px;color:var(--mu);margin-left:3px">${l.priority||'Medium'} priority</span>
-          <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;background:${sc}22;color:${sc};border:1px solid ${sc}44;margin-left:4px">${st}</span>
-          ${l.email?`<span style="font-size:10px;color:var(--mu)">📧 ${l.email}</span>`:''}
-          ${l.website?`<a href="${l.website}" target="_blank" style="font-size:10px;color:var(--a2);text-decoration:none">🌐 Website</a>`:''}
-          ${l.maps_url?`<a href="${l.maps_url}" target="_blank" style="font-size:10px;color:var(--a2);text-decoration:none">🗺️ Maps</a>`:''}
+          <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;background:${sc}22;color:${sc};border:1px solid ${sc}44">${st}</span>
+          <span style="font-size:9px;color:var(--mu)">${l.priority||'Medium'} priority</span>
         </div>
       </div>
+    </div>
+    <!-- All fields row -->
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)">
+      ${hasVal(l.phone)?`<button class="btn sm" onclick="navigator.clipboard.writeText('${l.phone}').then(()=>toast('📋 Copied!'))">📞 ${l.phone}</button>`:''}
+      ${hasVal(l.email)?`<a href="mailto:${l.email}" class="btn sm">📧 ${l.email}</a>`:''}
+      ${hasVal(l.address)&&l.address!=='—'?`<span style="font-size:10px;color:var(--mu);padding:3px 7px;background:var(--s2);border-radius:var(--rs);border:1px solid var(--b1)">📍 ${l.address}</span>`:''}
+      ${hasVal(l.website)?`<a href="${l.website}" target="_blank" class="btn sm" style="color:#00b894;border-color:rgba(0,184,148,.3)">🌐 Website</a>`:`<span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:var(--rs);background:rgba(255,118,117,.1);color:#ff7675;border:1px solid rgba(255,118,117,.25)">❌ No Website</span>`}
+      ${hasVal(l.maps_url)?`<a href="${l.maps_url}" target="_blank" class="btn sm">🗺️ Maps</a>`:''}
+      ${hasVal(l.social_media)?(l.social_media||'').split('|').map(s=>s.trim()).filter(s=>hasVal(s)).map(s=>{const lb=s.toLowerCase().includes('facebook')?'FB':s.toLowerCase().includes('instagram')?'IG':s.toLowerCase().includes('linkedin')?'LI':s.toLowerCase().includes('youtube')?'YT':'Link';return`<a href="${s}" target="_blank" class="btn sm">${lb}</a>`;}).join(''):''}
+      ${hasVal(l.service)&&l.service!=='—'&&l.service!=='All Services'?`<span style="font-size:10px;padding:3px 8px;border-radius:var(--rs);background:rgba(108,92,231,.12);color:var(--a2);border:1px solid rgba(108,92,231,.22)">${l.service}</span>`:''}
     </div>
     <div class="lh-acts">
       <a href="tel:${l.phone||''}" class="call-btn" onclick="markCalled(${l.id})">📞 Call ${fn(l.contact)}</a>
       <a href="${waUrl}" target="_blank" class="btn wa" onclick="markWA(${l.id})">💬 WA</a>
       <a href="${smsUrl}" class="btn sms-b">📱 SMS</a>
       <button class="btn gmail" onclick="sendViaGmailAPI()">📧 Email</button>
-      ${l.maps_url?`<a href="${l.maps_url}" target="_blank" class="btn">🗺️</a>`:''}
     </div>`;
 
   document.getElementById('emailMeta').innerHTML=`
@@ -1789,7 +2078,17 @@ function renderLeadView(l){
         <div class="fg"><label>Follow-up Time</label><input type="time" id="logTime"></div>
         <div class="fg"><label>Deal Value (₹)</label><input type="number" id="logDeal" placeholder="e.g. 25000"></div>
         <div class="fg"><label>Duration (mins)</label><input type="number" id="logDur" placeholder="e.g. 5"></div>
-        <div class="fg full"><label>Call Notes</label><textarea id="logNotes" placeholder="What did they say? Requirements, objections, next steps, budget…" style="min-height:75px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 10px;font-family:var(--fb);font-size:12px;color:var(--tx);resize:vertical;width:100%;outline:none"></textarea></div>
+        <div class="fg full"><label>Call Notes</label>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+          <span class="note-chip" onclick="addNoteChip(this)">Requested proposal</span>
+          <span class="note-chip" onclick="addNoteChip(this)">Budget concern</span>
+          <span class="note-chip" onclick="addNoteChip(this)">Call back next week</span>
+          <span class="note-chip" onclick="addNoteChip(this)">Needs demo</span>
+          <span class="note-chip" onclick="addNoteChip(this)">Already has vendor</span>
+          <span class="note-chip" onclick="addNoteChip(this)">Very interested</span>
+        </div>
+        <textarea id="logNotes" placeholder="What did they say? Requirements, objections, next steps, budget…" style="min-height:65px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 10px;font-family:var(--fb);font-size:12px;color:var(--tx);resize:vertical;width:100%;outline:none"></textarea>
+      </div>
       </div>
       <button class="btn success save-log-btn" style="width:100%;justify-content:center;padding:10px;font-size:12px" onclick="saveLog()">💾 Save Call Log</button>
     </div>`;
@@ -1799,6 +2098,7 @@ function renderLeadView(l){
     <div style="font-size:10px;color:var(--mu)">#${l.no||'—'} · ${l.priority||'Medium'} ${pct?'· '+pct+'%':''} ${l.rating?'· ⭐'+l.rating:''} · ${l.called?'📞 Called':'Not called yet'}</div>
     <div class="spacer"></div>
     <button class="btn" onclick="copyHTML()" style="font-size:10px">📋 HTML</button>
+    <button class="btn" onclick="goNextLead()" style="font-size:10px">⏭️ Next</button>
     <button class="btn success save-log-btn" onclick="saveLog()">💾 Save Log</button>`;
 }
 
@@ -1840,6 +2140,7 @@ async function saveLog(){
   const dur=parseInt(document.getElementById('logDur')?.value)||null;
 
   await sPost('call_logs',[{lead_id:curLead.id,called_by:curUser,call_outcome:selOC,notes:notes||null,follow_up_date:fd||null,follow_up_time:ft||null,deal_value:deal,duration_mins:dur,called_at:new Date().toISOString()}]);
+  callLogs.push({called_by:curUser,called_at:new Date().toISOString()});
   const update={called:true,overall_status:selOC,notes:notes||null,follow_up_date:fd||null,deal_value:deal};
   await sPatch('leads',curLead.id,update);
   await logAct('call_logged',curLead.id,curLead.business,`Outcome: ${selOC}${notes?' — '+notes.substring(0,60):''}${deal?' | ₹'+deal:''}`);
@@ -1850,10 +2151,11 @@ async function saveLog(){
   renderList();updateTopStats();renderLeadView(curLead);
   loadHistory(curLead.id);loadFollowupTab();loadNotIntTab();
   toast('✅ Call logged: '+selOC);
-  // FIX: use selector instead of hardcoded index [7]
+  // #4 auto-jump to next uncalled lead after save
   const histTab=document.querySelector('#leadTabs [onclick*="hist"]');
   switchTab('hist',histTab);
   saveLogBusy=false;
+  setTimeout(()=>goNextLead(),800);
 }
 
 async function loadHistory(leadId){
@@ -2138,7 +2440,7 @@ return`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" co
 
 function resetApp(){
   curUser='';curRole='';leads=[];filtered=[];allLeads=[];sheets=[];curLead=null;selOC='';activeFilter='all';pendingWorker=null;gmailToken=null;gmailEmail=null;saveLogBusy=false;
-  // Hide app, show splash
+  clearSession();
   document.getElementById('app').classList.remove('show');
   document.getElementById('splash').classList.remove('hide');
   // Reset panels
@@ -2156,6 +2458,175 @@ function resetApp(){
   document.querySelectorAll('.fc').forEach((c,i)=>c.classList.toggle('active',i===0));
   initSplash();
 }
+
+async function quickOutcome(id,outcome,el){
+  el.style.opacity='.4';
+  const l=leads.find(x=>x.id===id);
+  if(!l)return;
+  const update={called:true,overall_status:outcome};
+  await sPatch('leads',id,update);
+  await sPost('call_logs',[{lead_id:id,called_by:curUser,call_outcome:outcome,called_at:new Date().toISOString()}]);
+  callLogs.push({called_by:curUser,called_at:new Date().toISOString()});
+  await logAct('call_logged',id,l.business,'Quick: '+outcome);
+  Object.assign(l,update);
+  leads=leads.map(x=>x.id===id?{...x,...update}:x);
+  if(curRole==='admin')allLeads=allLeads.map(x=>x.id===id?{...x,...update}:x);
+  if(curLead&&curLead.id===id)Object.assign(curLead,update);
+  renderList();updateTopStats();
+  toast('✅ '+outcome+' logged!');
+}
+
+// ── #2 FOLLOW-UP ALERT BANNER ──
+function showFollowupAlert(){
+  const today=new Date().toISOString().split('T')[0];
+  const due=leads.filter(l=>l.follow_up_date&&l.follow_up_date<=today);
+  const el=document.getElementById('fuAlert');
+  const cnt=document.getElementById('fuAlertCount');
+  if(!el)return;
+  if(due.length){el.style.display='block';if(cnt)cnt.textContent=due.length;}
+  else el.style.display='none';
+}
+
+// ── #3 QUICK NOTE CHIPS ──
+function addNoteChip(el){
+  const ta=document.getElementById('logNotes');
+  if(!ta)return;
+  const val=el.textContent.trim();
+  ta.value=ta.value?(ta.value+', '+val):val;
+  el.style.opacity='.4';
+}
+
+// ── #4 NEXT UNCALLED LEAD ──
+function goNextLead(){
+  const uncalled=filtered.filter(l=>!l.called);
+  if(!uncalled.length){toast('All leads called! 🎉');return;}
+  const curIdx=curLead?uncalled.findIndex(l=>l.id===curLead.id):-1;
+  const next=uncalled[curIdx+1]||uncalled[0];
+  if(next)selectLead(next.id);
+}
+
+// ── #6 DAILY TARGET (admin dashboard) ──
+function renderDailyTargets(){
+  // reuse switchCallTab to show today's counts
+  switchCallTab('today');
+}
+
+let _callTab='all';
+function switchCallTab(tab){
+  _callTab=tab;
+  ['today','week','month','all'].forEach(t=>{
+    const btn=document.getElementById('ccTab-'+t);
+    if(btn)btn.classList.toggle('active',t===tab);
+  });
+  renderCallCountTable(tab);
+}
+
+function renderCallCountTable(tab){
+  const el=document.getElementById('callCountTable');
+  if(!el)return;
+  const now=new Date();
+  const y=now.getFullYear(),mo=now.getMonth(),d=now.getDate();
+  // 9am-9pm today window
+  const todayStart=new Date(y,mo,d,9,0,0).getTime();
+  const todayEnd=new Date(y,mo,d,21,0,0).getTime();
+  // week: Mon-Sun
+  const dayOfWeek=now.getDay()||7;
+  const weekStart=new Date(y,mo,d-(dayOfWeek-1),0,0,0).getTime();
+  // month start
+  const monthStart=new Date(y,mo,1,0,0,0).getTime();
+
+  const nonAdmin=workers.filter(w=>w.role!=='admin');
+  if(!nonAdmin.length){el.innerHTML='<div style="font-size:12px;color:var(--mu2)">No workers yet</div>';return;}
+
+  const rows=nonAdmin.map(w=>{
+    const wLogs=callLogs.filter(l=>l.called_by===w.name);
+    const todayCount=wLogs.filter(l=>{const t=new Date(l.called_at).getTime();return t>=todayStart&&t<=todayEnd;}).length;
+    const weekCount=wLogs.filter(l=>new Date(l.called_at).getTime()>=weekStart).length;
+    const monthCount=wLogs.filter(l=>new Date(l.called_at).getTime()>=monthStart).length;
+    const allCount=wLogs.length;
+    const count=tab==='today'?todayCount:tab==='week'?weekCount:tab==='month'?monthCount:allCount;
+    const target=tab==='today'?30:tab==='week'?150:tab==='month'?600:null;
+    const pct=target?Math.min(Math.round((count/target)*100),100):null;
+    const clr=!target?'#a29bfe':pct>=100?'#00b894':pct>=60?'#fdcb6e':'#ff7675';
+    return{name:w.name,count,pct,clr,target,todayCount,weekCount,monthCount,allCount};
+  }).sort((a,b)=>b.count-a.count);
+
+  el.innerHTML=`<table class="dt"><thead><tr>
+    <th>Worker</th>
+    <th style="color:#fdcb6e">Today<br><span style="font-size:9px;color:var(--mu2)">9am–9pm</span></th>
+    <th style="color:#a29bfe">This Week</th>
+    <th style="color:#00b894">This Month</th>
+    <th style="color:#fd79a8">All Time</th>
+    <th>Progress</th>
+  </tr></thead><tbody>${rows.map(r=>{
+    const bar=r.target?`<div class="perf-bar" style="min-width:80px"><div class="perf-fill" style="width:${r.pct}%;background:${r.clr}"></div></div>`:'<span style="font-size:10px;color:var(--mu2)">—</span>';
+    return`<tr>
+      <td style="font-weight:500">👤 ${r.name}</td>
+      <td style="color:#fdcb6e;font-weight:700;text-align:center">${r.todayCount}</td>
+      <td style="color:#a29bfe;font-weight:600;text-align:center">${r.weekCount}</td>
+      <td style="color:#00b894;font-weight:600;text-align:center">${r.monthCount}</td>
+      <td style="color:#fd79a8;font-weight:700;text-align:center">${r.allCount}</td>
+      <td>${bar}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ── #7 OVERDUE FOLLOW-UP BADGE ──
+function updateOverdueBadge(){
+  const today=new Date().toISOString().split('T')[0];
+  const overdue=allLeads.filter(l=>l.follow_up_date&&l.follow_up_date<today).length;
+  const badge=document.getElementById('fuBadge');
+  if(!badge)return;
+  if(overdue>0){badge.textContent=overdue;badge.style.display='';}
+  else badge.style.display='none';
+}
+
+// ── #9 EXPORT CSV ──
+function exportLeadsCSV(){
+  const rows=allLeads;
+  if(!rows.length){toast('No leads to export','warn');return;}
+  const headers=['Business','Contact','Phone','Email','Industry','Address','Status','Priority','Rating','Worker','Website'];
+  const csv=[headers.join(','),...rows.map(l=>[
+    `"${(l.business||'').replace(/"/g,'""')}"`,
+    `"${(l.contact||'').replace(/"/g,'""')}"`,
+    `"${l.phone||''}"`,
+    `"${l.email||''}"`,
+    `"${(l.industry||'').replace(/"/g,'""')}"`,
+    `"${(l.address||'').replace(/"/g,'""')}"`,
+    `"${l.overall_status||'New'}"`,
+    `"${l.priority||'Medium'}"`,
+    `"${l.rating||''}"`,
+    `"${l.assigned_to||''}"`,
+    `"${l.website||'"'}"`
+  ].join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`leads_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  toast('📊 CSV exported!');
+}
+
+// ── #10 AUTO-REFRESH worker leads every 2 min ──
+let _autoRefreshTimer=null;
+function startAutoRefresh(){
+  if(_autoRefreshTimer)clearInterval(_autoRefreshTimer);
+  if(curRole!=='worker')return;
+  _autoRefreshTimer=setInterval(async()=>{
+    const fresh=await sGet('leads',`select=*&assigned_to=eq.${encodeURIComponent(curUser)}&limit=2000&order=id.desc`);
+    if(!Array.isArray(fresh)||fresh.error)return;
+    const newIds=fresh.map(l=>l.id);
+    const oldIds=leads.map(l=>l.id);
+    const hasNew=newIds.some(id=>!oldIds.includes(id));
+    leads=fresh;
+    filtered=leads;
+    applyFilters();
+    updateTopStats();
+    if(hasNew)toast('🟢 New leads assigned!');
+  },120000);
+}
+
+// ── #11 DUPLICATE PHONE CHECK in addSingleLead (handled in addSingleLead below) ──
 
 function toast(msg,type='ok',dur=3500){
   const t=document.getElementById('toast');
