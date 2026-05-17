@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #08080e;
+  --color-s1: #0f0f18;
+  --color-s2: #14141f;
+  --color-s3: #1c1c2a;
+  
+  --color-b1: rgba(255, 255, 255, 0.06);
+  --color-b2: rgba(255, 255, 255, 0.11);
+  --color-b3: rgba(255, 255, 255, 0.18);
+  
+  --color-accent: #6c5ce7;
+  --color-a1: #6c5ce7;
+  --color-a2: #a29bfe;
+  --color-a3: #fd79a8;
+  
+  --color-green: #00b894;
+  --color-amber: #fdcb6e;
+  --color-red: #ff7675;
+  --color-blue: #4a6cf7;
+  
+  --color-tx: #eeedf8;
+  --color-mu: #8887a0;
+  --color-mu2: #55546e;
+  
+  --font-display: "Syne", sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+  
+  --radius-r: 12px;
+  --radius-rs: 8px;
+}
+
+/* Custom Base Configurations */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-tx);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbar defaults and style custom ones */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.11);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Custom fadeUp Animation */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fu-anim {
+  animation: fadeUp 0.28s ease both;
+}
+
+/* Badge specific styling overrides */
+.badge-admin {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 100px;
+  background: rgba(253, 121, 168, 0.15);
+  color: #fd79a8;
+  border: 1px solid rgba(253, 121, 168, 0.3);
+}
+
+.badge-worker {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(162, 155, 254, 0.12);
+  color: #a29bfe;
+  border: 1px solid rgba(162, 155, 254, 0.25);
+}
+
+/* Eye design element */
+.sp-eye::before {
+  content: '';
+  flex: 0 0 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #6c5ce7);
+}
+
+.sp-eye::after {
+  content: '';
+  flex: 0 0 24px;
+  height: 1px;
+  background: linear-gradient(90deg, #6c5ce7, transparent);
+}
+
+/* Standard HTML email container responsiveness */
+.email-preview-wrap iframe {
+  background-color: #fff;
+  border-radius: 12px;
+}
+
+/* Custom Table Utilities for Mobile Scroll */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Shake Animation for incorrect PIN entry */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+  20%, 40%, 60%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+  border-color: var(--color-red) !important;
+}
+
