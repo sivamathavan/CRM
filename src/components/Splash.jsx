@@ -9,6 +9,12 @@ export default function Splash({ workers, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Force-clear inputs on mount to prevent browser autofill from leaking saved credentials
+  useEffect(() => {
+    setUsernameInput('');
+    setPasswordInput('');
+  }, []);
+
   // Clear error message when user starts typing or changes inputs
   useEffect(() => {
     if (error) {
@@ -113,7 +119,7 @@ export default function Splash({ workers, onLoginSuccess }) {
           Workspace Secure Login
         </h2>
 
-        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4" autoComplete="off">
           {/* Username / ID input field */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] uppercase font-bold text-mu2 tracking-wider select-none">
@@ -129,6 +135,7 @@ export default function Splash({ workers, onLoginSuccess }) {
                 onChange={(e) => setUsernameInput(e.target.value)}
                 placeholder="Enter Your ID"
                 className="w-full bg-bg border border-b2 rounded-rs pl-9 pr-3 py-2 text-xs text-tx outline-none focus:border-accent transition-colors"
+                autoComplete="off"
                 autoFocus
               />
             </div>
@@ -149,6 +156,7 @@ export default function Splash({ workers, onLoginSuccess }) {
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Enter Your Passkey"
                 className="w-full bg-bg border border-b2 rounded-rs pl-9 pr-10 py-2 text-xs text-tx outline-none focus:border-accent transition-colors tracking-wide"
+                autoComplete="new-password"
               />
               <button
                 type="button"
