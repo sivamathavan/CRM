@@ -257,7 +257,7 @@ export default function AllLeadsList({
       </div>
 
       {/* Interactive Datatable Container */}
-      <div className="bg-s2 border border-b2 rounded-r shadow overflow-hidden">
+      <div className="bg-s2 border border-b2 rounded-r shadow overflow-y-auto max-h-[calc(100dvh-230px)]">
         <div className="table-responsive">
           {filteredLeads.length === 0 ? (
             <div className="text-xs text-mu2 py-10 text-center select-none">

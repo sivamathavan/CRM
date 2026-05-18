@@ -32,10 +32,13 @@ export default function LeadList({
   const dueCount = rawLeads.filter(l => l.follow_up_date && l.follow_up_date.startsWith(todayStr)).length;
 
   // Filter handlers
+  const noAnswerCount = rawLeads.filter(l => l.overall_status === 'No Answer').length;
+
   const filterTabs = [
     { id: 'all', label: 'All' },
     { id: 'uncalled', label: '📞 Uncalled' },
     { id: 'followup', label: `⏰ Due (${dueCount})` },
+    { id: 'No Answer', label: `📵 No Answer (${noAnswerCount})` },
     { id: 'called', label: '✅ Called' },
     { id: 'Interested', label: '🔥 Hot' },
     { id: 'Call Back', label: '🔄 CB' },

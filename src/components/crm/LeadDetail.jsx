@@ -35,6 +35,7 @@ export default function LeadDetail({
   showToast
 }) {
   const [activeTab, setActiveTab] = useState('call');
+  const [scriptLang, setScriptLang] = useState('ta'); // Bilingual Call Script Language
   const [selOutcome, setSelOutcome] = useState('');
   const [logNotes, setLogNotes] = useState('');
   const [followupDate, setFollowupDate] = useState('');
@@ -49,20 +50,25 @@ export default function LeadDetail({
   const [timerActive, setTimerActive] = useState(false);
 
   const emailFrameRef = useRef(null);
+  const lastLeadIdRef = useRef(null);
 
   // Sync state when lead changes
   useEffect(() => {
     if (lead) {
-      setSelOutcome('');
-      setLogNotes('');
-      setFollowupDate(lead.follow_up_date || '');
-      setFollowupTime('');
-      setDealValue(lead.deal_value || '');
-      setDuration('');
-      setCallSecs(0);
-      setTimerActive(false); // Do not auto-start call timer on lead select
-      setActiveTab('call'); // Reset to call outcome
+      if (lastLeadIdRef.current !== lead.id) {
+        lastLeadIdRef.current = lead.id;
+        setSelOutcome('');
+        setLogNotes('');
+        setFollowupDate(lead.follow_up_date || '');
+        setFollowupTime('');
+        setDealValue(lead.deal_value || '');
+        setDuration('');
+        setCallSecs(0);
+        setTimerActive(false); // Do not auto-start call timer on lead select
+        setActiveTab('call'); // Reset to call outcome
+      }
     } else {
+      lastLeadIdRef.current = null;
       setTimerActive(false);
     }
   }, [lead]);
@@ -166,6 +172,9 @@ export default function LeadDetail({
       dealValue: dealValue ? parseFloat(dealValue) : null,
       duration: duration ? parseInt(duration) : null
     });
+    // Automatically stop and reset the call timer for the next call
+    setTimerActive(false);
+    setCallSecs(0);
     setIsSaving(false);
   };
 
@@ -282,6 +291,22 @@ export default function LeadDetail({
               🗺️ Maps ↗
             </a>
           )}
+          <a 
+            href={lead.facebook_url || lead.facebook || `https://www.facebook.com/search/top/?q=${encodeURIComponent(lead.business + ' ' + (lead.city && lead.city !== '—' ? lead.city : ''))}`} 
+            target="_blank" 
+            rel="noreferrer"
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-rs bg-blue/10 border border-blue/30 text-[#2980b9] hover:bg-blue/20 text-decoration-none"
+          >
+            🔵 Facebook ↗
+          </a>
+          <a 
+            href={lead.instagram_url || lead.instagram || `https://www.instagram.com/search/top/?q=${encodeURIComponent(lead.business)}`} 
+            target="_blank" 
+            rel="noreferrer"
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-rs bg-pink-500/10 border border-[#e84393]/30 text-[#e84393] hover:bg-pink-500/20 text-decoration-none"
+          >
+            📸 Instagram ↗
+          </a>
         </div>
 
         {/* Action Calling Toolbar */}
@@ -329,10 +354,9 @@ export default function LeadDetail({
       <div className="flex border-b border-b1 bg-s1 shrink-0 overflow-x-auto select-none scrollbar-none scrollbar-width-none">
         {[
           { id: 'call', label: '📞 Call Log' },
+          { id: 'script', label: '📜 Call Script' },
           { id: 'email', label: '📧 Email' },
           { id: 'wa-en', label: '💬 WA EN' },
-          { id: 'wa-ta', label: '💬 WA TN' },
-          { id: 'sms', label: '📱 SMS' },
           { id: 'followup', label: '📅 Followups' },
           { id: 'notint', label: '❌ Not Interested' },
           { id: 'hist', label: '📋 History' },
@@ -594,40 +618,123 @@ export default function LeadDetail({
           </div>
         )}
 
-        {/* tab: WhatsApp TN template view */}
-        {activeTab === 'wa-ta' && (
+        {/* tab: Call Script view */}
+        {activeTab === 'script' && (
           <div className="p-4 fu-anim">
-            <div className="flex justify-between items-center mb-2.5 select-none">
-              <span className="text-[10px] text-mu font-semibold">💬 Tamil Message Template (Follow-up)</span>
-              <button
-                onClick={() => handleCopyMsg(buildWATN(lead))}
-                className="btn text-[9px] px-2.5 py-1 border border-b2 bg-s2 hover:bg-s3 text-tx rounded flex items-center gap-1 cursor-pointer"
-              >
-                <Clipboard size={10} />
-                <span>Copy</span>
-              </button>
-            </div>
-            <div className="bg-s2 border border-b1 rounded-r p-4 text-xs font-mono text-[#c8c6d8] whitespace-pre-wrap word-break select-all leading-relaxed max-h-[400px] overflow-y-auto">
-              {buildWATN(lead)}
-            </div>
-          </div>
-        )}
+            <div className="bg-s2 border border-b2 rounded-r p-5">
+              <div className="flex items-center justify-between border-b border-b1 pb-3 mb-4 select-none">
+                <div>
+                  <h3 className="font-display text-sm font-bold text-white flex items-center gap-1.5">
+                    📜 Interactive Calling Script
+                  </h3>
+                  <p className="text-[10px] text-mu">Follow this proven bilingual roadmap to convert leads</p>
+                </div>
+                <div className="flex bg-s3 rounded px-2.5 py-1 border border-b2 items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-green uppercase animate-pulse">Live Guide</span>
+                </div>
+              </div>
 
-        {/* tab: SMS template view */}
-        {activeTab === 'sms' && (
-          <div className="p-4 fu-anim">
-            <div className="flex justify-between items-center mb-2.5 select-none">
-              <span className="text-[10px] text-mu font-semibold">📱 Professional SMS Message Template</span>
-              <button
-                onClick={() => handleCopyMsg(buildSMS(lead))}
-                className="btn text-[9px] px-2.5 py-1 border border-b2 bg-s2 hover:bg-s3 text-tx rounded flex items-center gap-1 cursor-pointer"
-              >
-                <Clipboard size={10} />
-                <span>Copy</span>
-              </button>
-            </div>
-            <div className="bg-s2 border border-b1 rounded-r p-4 text-xs font-mono text-[#c8c6d8] whitespace-pre-wrap word-break select-all leading-relaxed max-h-[400px] overflow-y-auto">
-              {buildSMS(lead)}
+              {/* Service Quick Ref Info Card */}
+              <div className="bg-bg/40 border border-b1 rounded-rs p-3 mb-4 leading-normal select-none">
+                <span className="text-[9px] uppercase font-bold text-mu2 tracking-wider block mb-1">Lead Requirement Service</span>
+                <div className="text-xs text-white font-semibold flex items-center gap-1.5">
+                  <span className="text-base">{s.icon}</span>
+                  <span>{s.title} — {s.pitch}</span>
+                </div>
+              </div>
+
+              {/* Bilingual Tab Selector internally */}
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="col-span-4 flex bg-s3 rounded-rs p-0.5 border border-b1">
+                  <button 
+                    onClick={() => setScriptLang('ta')} 
+                    className={`flex-1 text-[10px] font-bold py-1.5 rounded-rs transition-all cursor-pointer ${scriptLang === 'ta' ? 'bg-accent text-white' : 'text-mu hover:text-tx'}`}
+                  >
+                    தமிழ் (Tamil Script)
+                  </button>
+                  <button 
+                    onClick={() => setScriptLang('en')} 
+                    className={`flex-1 text-[10px] font-bold py-1.5 rounded-rs transition-all cursor-pointer ${scriptLang === 'en' ? 'bg-accent text-white' : 'text-mu hover:text-tx'}`}
+                  >
+                    English Script
+                  </button>
+                </div>
+              </div>
+
+              {scriptLang === 'ta' ? (
+                <div className="flex flex-col gap-4 text-xs text-tx leading-relaxed">
+                  
+                  {/* Step 1 */}
+                  <div className="border-l-2 border-green pl-3 py-1">
+                    <strong className="text-[10px] text-green uppercase tracking-wide font-bold block mb-1 select-none">Step 1: Introduction (அறிமுகம்)</strong>
+                    <p className="font-medium text-white bg-bg/25 border border-b1/30 rounded p-2.5 italic">
+                      "வணக்கம் {fn(lead.contact)} சார்/மேடம், நான் Rturox Technology-ல இருந்து பேசுறேன்... உங்க {lead.business} பத்தி பேசலாமா? உங்ககிட்ட ஒரு 2 நிமிஷம் பேச தகுந்த நேரமா?"
+                    </p>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="border-l-2 border-accent pl-3 py-1">
+                    <strong className="text-[10px] text-a2 uppercase tracking-wide font-bold block mb-1 select-none">Step 2: The Pitch (தேவை விளக்கம்)</strong>
+                    <p className="font-medium text-white bg-bg/25 border border-b1/30 rounded p-2.5 italic">
+                      "நாங்க தமிழ்நாடு முழுக்க 20-க்கும் மேற்பட்ட நிறுவனங்களுக்கு Digital growth & Web/App development பண்ணி தரோம். உங்க {lead.business}-க்கு {s.title} பத்தி பேசத்தான் கூப்பிட்டேன்.
+                      {hasWeb ? ` நாங்க உங்க Website பார்த்தோம், அதுல சில முக்கியமான அப்டேட்ஸ் பண்ணா உங்க Business இன்னும் நல்லா வளரும்.` : ` உங்க பிசினஸ்க்கு இப்போ Website எதுவும் இல்ல, இப்போ உள்ள காலத்துல Online-ல வரது ரொம்ப முக்கியம்.`}"
+                    </p>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="border-l-2 border-amber pl-3 py-1">
+                    <strong className="text-[10px] text-amber uppercase tracking-wide font-bold block mb-1 select-none">Step 3: Call Closure (முடிப்பு)</strong>
+                    <p className="font-medium text-white bg-bg/25 border border-b1/30 rounded p-2.5 italic">
+                      "நான் உங்களுக்கு இதோட முழு விபரம் மற்றும் எங்களோட முந்தைய வேலைகளை (Portfolio) WhatsApp-ல அனுப்பட்டுமா சார்/மேடம்? நீங்க பார்த்துட்டு சொல்லுங்க!"
+                    </p>
+                  </div>
+
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 text-xs text-tx leading-relaxed">
+                  
+                  {/* Step 1 */}
+                  <div className="border-l-2 border-green pl-3 py-1">
+                    <strong className="text-[10px] text-green uppercase tracking-wide font-bold block mb-1 select-none">Step 1: Introduction</strong>
+                    <p className="font-medium text-white bg-bg/25 border border-b1/30 rounded p-2.5 italic">
+                      "Hello {fn(lead.contact)} Sir/Madam, I'm calling from Rturox Technology. Is this a good time to speak for 2 minutes regarding your business {lead.business}?"
+                    </p>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="border-l-2 border-accent pl-3 py-1">
+                    <strong className="text-[10px] text-a2 uppercase tracking-wide font-bold block mb-1 select-none">Step 2: Business Pitch</strong>
+                    <p className="font-medium text-white bg-bg/25 border border-b1/30 rounded p-2.5 italic">
+                      "We are a leading digital agency in Tamil Nadu. We specialize in {s.title}. We reviewed {lead.business} and believe we can help you grow {s.pitch}"
+                    </p>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="border-l-2 border-amber pl-3 py-1">
+                    <strong className="text-[10px] text-amber uppercase tracking-wide font-bold block mb-1 select-none">Step 3: Call Closure</strong>
+                    <p className="font-medium text-white bg-bg/25 border border-b1/30 rounded p-2.5 italic">
+                      "Shall I share our complete details and portfolio on your WhatsApp, Sir/Madam? You can review it at your convenience."
+                    </p>
+                  </div>
+
+                </div>
+              )}
+
+              {/* Quick Objection Handler guide */}
+              <div className="mt-5 border-t border-b1 pt-4 select-none">
+                <span className="text-[10px] uppercase font-bold text-mu2 tracking-wider block mb-2">💡 Objection Handling (சந்தேகம் தீர்த்தல்)</span>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div className="bg-s3/40 border border-b1 rounded p-2.5">
+                    <strong className="text-white block mb-0.5">"Already have vendor"</strong>
+                    <span className="text-mu">Offer free website audit and guaranteed 20% lower renewal pricing.</span>
+                  </div>
+                  <div className="bg-s3/40 border border-b1 rounded p-2.5">
+                    <strong className="text-white block mb-0.5">"Too expensive"</strong>
+                    <span className="text-mu">Highlight flexible EMI/monthly plans starting at low costs.</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         )}

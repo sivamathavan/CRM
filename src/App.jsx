@@ -25,8 +25,8 @@ const parsePhotoUrlParams = (url) => {
 };
 
 export default function App() {
-  const [curUser, setCurUser] = useState('');
-  const [curRole, setCurRole] = useState(''); // 'admin' or 'worker'
+  const [curUser, setCurUser] = useState(() => localStorage.getItem('curUser') || '');
+  const [curRole, setCurRole] = useState(() => localStorage.getItem('curRole') || ''); // 'admin' or 'worker'
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   
   // Custom Toast state
@@ -72,8 +72,6 @@ export default function App() {
       }
 
       if (savedUser && savedRole) {
-        setCurUser(savedUser);
-        setCurRole(savedRole);
         setActiveView(savedRole === 'admin' ? 'admin' : 'crm');
         await loadAllData(savedUser, savedRole);
       }
@@ -82,6 +80,19 @@ export default function App() {
 
     restoreSession();
   }, []);
+
+  // 1.5 Background Auto-Sync Polling (every 20 seconds for admin, every 40 seconds for workers)
+  useEffect(() => {
+    if (!curUser) return;
+
+    const interval = setInterval(() => {
+      loadAllData(curUser, curRole).catch(err => {
+        console.error("Auto-sync background reload failed:", err);
+      });
+    }, curRole === 'admin' ? 20000 : 40000);
+
+    return () => clearInterval(interval);
+  }, [curUser, curRole]);
 
   // 2. SUPABASE REFRESH ENGINE
   const loadAllData = async (user = curUser, role = curRole) => {
@@ -197,11 +208,17 @@ export default function App() {
       await sPatch('leads', leadId, updateData);
 
       // c. Insert activity audit log
+      const formattedDetail = `Outcome: ${outcome}` + 
+        (duration ? ` · ⏱️ Duration: ${duration} mins` : '') + 
+        (dealValue ? ` · 💰 Deal Value: ₹${parseFloat(dealValue).toLocaleString('en-IN')}` : '') + 
+        (followupDate ? ` · 📅 Follow-up: ${followupDate}${followupTime ? ` at ${followupTime}` : ''}` : '') + 
+        (notes ? `\n📝 Notes: ${notes}` : '');
+
       await sPost('activity_log', [{
         action: 'call_logged',
         lead_id: leadId,
         lead_business: targetLead.business,
-        detail: `Logged: ${outcome}. ${notes ? `Notes: ${notes}` : ''}`,
+        detail: formattedDetail,
         worker_name: curUser || 'System',
         created_at: new Date().toISOString()
       }]);
@@ -275,7 +292,7 @@ export default function App() {
         action: 'call_logged',
         lead_id: leadId,
         lead_business: targetLead.business,
-        detail: `Quick log: ${outcome}`,
+        detail: `Outcome: ${outcome} (Sidebar Quick Log)`,
         worker_name: curUser || 'System',
         created_at: new Date().toISOString()
       }]);
@@ -468,7 +485,7 @@ export default function App() {
   const activeHotCount = leads.filter(l => l.overall_status === 'Interested').length;
 
   return (
-    <div id="app" className="flex flex-col h-screen overflow-hidden bg-bg text-tx show">
+    <div id="app" className="flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden bg-bg text-tx show">
       
       {/* Premium Toast Container */}
       <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full select-none">

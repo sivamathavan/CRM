@@ -65,7 +65,7 @@ export default function ActivityLog({ activities, workers = [] }) {
   ];
 
   return (
-    <div className="p-4 flex flex-col gap-4 fu-anim select-none max-h-[500px]">
+    <div className="p-4 flex flex-col gap-4 fu-anim select-none flex-1 min-h-0 overflow-hidden">
       
       {/* Category Filter and Selectors */}
       <div className="flex justify-between items-center gap-3 flex-wrap">
@@ -117,7 +117,7 @@ export default function ActivityLog({ activities, workers = [] }) {
       </div>
 
       {/* Vertical Timeline Container */}
-      <div className="bg-s2 border border-b2 rounded-r shadow overflow-y-auto min-h-0 flex-1 max-h-[420px]">
+      <div className="bg-s2 border border-b2 rounded-r shadow overflow-y-auto flex-1 min-h-0">
         {filteredLogs.length === 0 ? (
           <div className="text-xs text-mu2 py-10 text-center">
             No audit logs recorded in system.
@@ -158,7 +158,7 @@ export default function ActivityLog({ activities, workers = [] }) {
                     </div>
 
                     {(log.detail || log.details) && (
-                      <p className="text-[11px] text-mu leading-normal mt-1 border-t border-b1/30 pt-1">
+                      <p className="text-[11px] text-mu leading-normal mt-1 border-t border-b1/30 pt-1 whitespace-pre-wrap">
                         {log.detail || log.details}
                       </p>
                     )}

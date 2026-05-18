@@ -114,7 +114,7 @@ export default function CalledList({ leads, callLogs, workers = [] }) {
       </div>
 
       {/* Datatable Scroll Container */}
-      <div className="bg-s2 border border-b2 rounded-r shadow overflow-hidden">
+      <div className="bg-s2 border border-b2 rounded-r shadow overflow-y-auto max-h-[calc(100dvh-190px)]">
         <div className="table-responsive">
           {filtered.length === 0 ? (
             <div className="text-xs text-mu2 py-10 text-center">
